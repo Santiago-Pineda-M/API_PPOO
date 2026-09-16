@@ -1,0 +1,26 @@
+# Build artifacts
+bin/
+obj/
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Test / coverage output
+TestResults/
+*.coverage
+*.coveragexml
+
+# OS
+Thumbs.db
+.DS_Store
