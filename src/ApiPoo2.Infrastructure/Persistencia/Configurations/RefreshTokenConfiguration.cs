@@ -23,6 +23,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.Property(t => t.ReplacedByTokenId).HasColumnName("replaced_by_token_id");
         builder.Property(t => t.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("timestamptz");
         builder.Property(t => t.UpdatedAtUtc).HasColumnName("updated_at_utc").HasColumnType("timestamptz");
+        builder.Property<uint>("xmin").HasColumnName("xmin").IsRowVersion();
 
         builder.HasIndex(t => t.TokenHash).IsUnique();
         builder.HasIndex(t => t.UserId);

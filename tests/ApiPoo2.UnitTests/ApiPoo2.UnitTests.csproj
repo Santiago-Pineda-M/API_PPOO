@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ApiPoo2.Domain\ApiPoo2.Domain.csproj" />
     <ProjectReference Include="..\..\src\ApiPoo2.Application\ApiPoo2.Application.csproj" />
+    <ProjectReference Include="..\..\src\ApiPoo2.Infrastructure\ApiPoo2.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

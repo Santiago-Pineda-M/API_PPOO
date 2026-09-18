@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using ApiPoo2.Application.IRepositories;
 using ApiPoo2.Application.IServices;
+using ApiPoo2.Domain.Entities;
 using ApiPoo2.Infrastructure.Options;
 using ApiPoo2.Infrastructure.Persistencia;
 using ApiPoo2.Infrastructure.Persistencia.Repositories;
@@ -70,6 +71,17 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(jwtOptions.Secret) || jwtOptions.Secret.Length < 32)
         {
             throw new InvalidOperationException("JWT_SECRET no está configurada o es demasiado corta (mínimo 32 caracteres).");
+        }
+
+        if (jwtOptions.AccessTokenTtlMinutes <= 0)
+        {
+            throw new InvalidOperationException("Jwt__AccessTokenTtlMinutes debe ser mayor a 0.");
+        }
+
+        if (jwtOptions.RefreshTokenTtlDays <= 0 || jwtOptions.RefreshTokenTtlDays > RefreshToken.MaxLifetime.Days)
+        {
+            throw new InvalidOperationException(
+                $"Jwt__RefreshTokenTtlDays debe estar entre 1 y {RefreshToken.MaxLifetime.Days} (máximo permitido por el dominio).");
         }
 
         services.AddSingleton(jwtOptions);

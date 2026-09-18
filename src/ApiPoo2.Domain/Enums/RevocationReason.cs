@@ -7,4 +7,5 @@ public enum RevocationReason
     SecurityBreach = 2,
     SessionLimitReached = 3,
     ExplicitRevocation = 4,
+    PasswordChanged = 5,
 }

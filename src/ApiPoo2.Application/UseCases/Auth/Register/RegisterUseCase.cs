@@ -36,12 +36,12 @@ public sealed class RegisterUseCase : BaseUseCase<RegisterInputDto, RegisterUser
     {
         var email = request.Email.Trim().ToLowerInvariant();
 
+        PasswordPolicy.EnsureValid(request.Password);
+
         if (await _userRepository.ExistsByEmailAsync(email, cancellationToken))
         {
             throw new ConflictException("email.conflict", "Ya existe una cuenta con ese correo electrónico.");
         }
-
-        PasswordPolicy.EnsureValid(request.Password);
 
         var passwordHash = _passwordHasher.Hash(request.Password);
         var user = User.Register(

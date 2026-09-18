@@ -5,7 +5,7 @@
 ## Layout
 
 - `src/ApiPoo2.Domain` — entities, value objects, domain events/exceptions. No project refs.
-- `src/ApiPoo2.Application` — use cases grouped by feature (`UseCases/<Feature>/<Caso>/`), validators, exceptions, DTOs (`Models/`), `IRepositories`/`IServices`. Depends only on Domain.
+- `src/ApiPoo2.Application` — use cases grouped by feature (`UseCases/<Feature>/<Caso>/`), validators, exceptions, DTOs (`DTOs/`), `IRepositories`/`IServices`. Depends only on Domain.
 - `src/ApiPoo2.Infrastructure` — EF Core/Npgsql, repositories, JWT/password services, `.env` loader, migrations. Depends on Domain + Application.
 - `src/ApiPoo2.WebApi` — controllers + exception middleware, composition root, `public partial class Program`.
 - `tests/` — UnitTests, IntegrationTests, ArchitectureTests. ArchitectureTests enforce layer refs and "domain entities expose no public setters" — preserve that invariant.
@@ -30,8 +30,10 @@
 - Use-case requests are records named `<Caso>Request` (e.g. `RegisterRequest`) living next to the use case; controllers bind them directly as `[FromBody]` and inject the concrete use cases by constructor (one per endpoint). Keep application/domain logic out of WebApi.
 - Errors: throw typed exceptions from Application/Domain (`BaseApplicationException` subclasses, `DomainValidationException`) carrying a stable machine-readable `code` and a Spanish message. `ExceptionHandlingMiddleware` maps them to `application/problem+json` `{status, code, message, errors, traceId}`. Integration tests assert these codes (`email.conflict`, `password.policy`, `refresh.reuse`, …) — keep messages Spanish and codes stable.
 - Domain entities have no public setters; mutate only via domain methods/factories (e.g. `User.Register`). Password rules live in `Domain/Common/PasswordPolicy.EnsureValid`; `Email`/`PasswordHash` are value objects.
-- **DTO rules**: DTOs live only in `Application/Models/` and are created only by use cases (repos return domain entities, never DTOs; Domain/Infrastructure never reference DTOs). Name DTOs `<Accion><Entidad>Dto` — the producing action plus the domain concept, never the bare entity name (e.g. `RegisterUserDto`, `CurrentUserDto`, `LoginTokenPairDto`, `RefreshTokenPairDto`; avoid `UserDto`). `OperationResult` is an exception (generic result type, not entity-shaped).
+- **DTO rules**: DTOs live only in `Application/DTOs/` and are created only by use cases (repos return domain entities, never DTOs; Domain/Infrastructure never reference DTOs). Name DTOs `<Accion><Entidad>Dto` — the producing action plus the domain concept, never the bare entity name (e.g. `RegisterUserDto`, `CurrentUserDto`, `LoginTokenPairDto`, `RefreshTokenPairDto`; avoid `UserDto`). `OperationResult` is an exception (generic result type, not entity-shaped).
 - EF configs (`Infrastructure/Persistencia/Configurations`) use snake_case tables/columns (`users`, `refresh_tokens`, `blacklisted_tokens`); `PasswordHash` is an owned type and `Email` uses a converter.
+- **Concurrency & invariants**: `refresh_tokens` carries octal concurrency via the Postgres `xmin` row version (`RefreshTokenConfiguration`). `UnitOfWork.SaveChangesAsync` maps `DbUpdateConcurrencyException` → `UnauthorizedException("refresh.reuse", …)` and Postgres unique violations on `users` → `ConflictException("email.conflict", …)` (`Infrastructure/Persistencia/Exceptions/PersistenceErrors.cs`). Don't rename the `users` email index (`IX_users_email` mapping depends on it). Guided by domain limits: `RefreshToken.MaxLifetime` is 7 days and `Jwt__RefreshTokenTtlDays` is capped at that at startup.
+- Registration validates password policy **before** checking duplicate email. `ChangePassword` invalidates all sessions: it blacklists the current access token and revokes every refresh token (`RevocationReason.PasswordChanged`) — the input carries `AccessTokenJti`/`AccessTokenExpiresAtUtc` fabricated by the controller from claims. `RevokeRefreshToken` returns 404 (`user.not_found`) for unknown users.
 
 ## Testing gotchas
 

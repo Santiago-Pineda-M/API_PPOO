@@ -1,5 +1,8 @@
+using ApiPoo2.Application.Exceptions;
 using ApiPoo2.Application.IRepositories;
 using ApiPoo2.Domain.Common;
+using ApiPoo2.Infrastructure.Persistencia.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiPoo2.Infrastructure.Persistencia.Repositories;
 
@@ -19,6 +22,17 @@ public sealed class UnitOfWork : IUnitOfWork
             entry.Entity.ClearDomainEvents();
         }
 
-        return await _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new UnauthorizedException("refresh.reuse", "Se detectó reuso de token de refresco. Sesión revocada.");
+        }
+        catch (DbUpdateException ex)
+        {
+            throw PersistenceErrors.Map(ex);
+        }
     }
 }

@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ApiPoo2.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ApiPoo2.Domain\ApiPoo2.Domain.csproj" />
     <ProjectReference Include="..\ApiPoo2.Application\ApiPoo2.Application.csproj" />
   </ItemGroup>

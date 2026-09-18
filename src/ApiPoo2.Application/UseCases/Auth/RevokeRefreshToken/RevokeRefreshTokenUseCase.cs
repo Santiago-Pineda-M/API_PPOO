@@ -33,7 +33,7 @@ public sealed class RevokeRefreshTokenUseCase : BaseUseCase<RevokeRefreshTokenIn
     protected override async Task<OperationResult> ExecuteCoreAsync(RevokeRefreshTokenInputDto request, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdWithRefreshTokensAsync(request.UserId, cancellationToken)
-            ?? throw new UnauthorizedException("user.not_found", "El usuario no existe.");
+            ?? throw new NotFoundException("user.not_found", "El usuario no existe.");
 
         var hash = _jwtTokenService.HashRefreshToken(request.RefreshToken);
         var token = user.RefreshTokens.FirstOrDefault(t => t.TokenHash == hash);

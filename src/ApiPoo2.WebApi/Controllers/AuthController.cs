@@ -81,7 +81,12 @@ public sealed class AuthController : ControllerBase
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordInputDto body, CancellationToken cancellationToken)
     {
         await _changePassword.ExecuteAsync(
-            new ChangePasswordInputDto(User.GetUserId(), body.CurrentPassword, body.NewPassword),
+            new ChangePasswordInputDto(
+                User.GetUserId(),
+                body.CurrentPassword,
+                body.NewPassword,
+                User.GetTokenJti(),
+                User.GetTokenExpiresAtUtc()),
             cancellationToken);
 
         return NoContent();
