@@ -1,5 +1,5 @@
 using System.Reflection;
-using ApiPoo2.Application.CQRS;
+using ApiPoo2.Application.UseCases;
 using ApiPoo2.Domain.Entities;
 using ApiPoo2.Infrastructure.Persistencia;
 using FluentAssertions;
@@ -29,7 +29,7 @@ public sealed class LayerDependencyTests
     [Fact]
     public void Application_Should_DependOnlyOnDomain()
     {
-        var references = ReferencedAssemblies(typeof(ICommand<>).Assembly);
+        var references = ReferencedAssemblies(typeof(BaseUseCase<,>).Assembly);
 
         references.Should().Contain(DomainName);
         references.Should().NotContain(InfrastructureName);

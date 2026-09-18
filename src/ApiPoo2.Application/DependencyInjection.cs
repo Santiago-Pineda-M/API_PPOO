@@ -1,6 +1,12 @@
-using System.Reflection;
-using ApiPoo2.Application.Pipeline;
-using ApiPoo2.Application.CQRS;
+using ApiPoo2.Application.DTOs;
+using ApiPoo2.Application.UseCases;
+using ApiPoo2.Application.UseCases.Auth.ChangePassword;
+using ApiPoo2.Application.UseCases.Auth.GetCurrentUser;
+using ApiPoo2.Application.UseCases.Auth.Login;
+using ApiPoo2.Application.UseCases.Auth.Logout;
+using ApiPoo2.Application.UseCases.Auth.RefreshToken;
+using ApiPoo2.Application.UseCases.Auth.Register;
+using ApiPoo2.Application.UseCases.Auth.RevokeRefreshToken;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,37 +14,21 @@ namespace ApiPoo2.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services, Assembly? assembly = null)
+    public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        var targetAssembly = assembly ?? typeof(ICommand<>).Assembly;
+        services.AddScoped<RegisterUseCase>();
+        services.AddScoped<LoginUseCase>();
+        services.AddScoped<RefreshTokenUseCase>();
+        services.AddScoped<LogoutUseCase>();
+        services.AddScoped<ChangePasswordUseCase>();
+        services.AddScoped<RevokeRefreshTokenUseCase>();
+        services.AddScoped<GetCurrentUserUseCase>();
 
-        services.AddScoped<IDispatcher, Dispatcher>();
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
-
-        RegisterHandlers(services, targetAssembly);
-        services.AddValidatorsFromAssembly(targetAssembly, includeInternalTypes: true);
+        services.AddScoped<IValidator<RegisterInputDto>, RegisterValidator>();
+        services.AddScoped<IValidator<LoginInputDto>, LoginValidator>();
+        services.AddScoped<IValidator<RefreshTokenInputDto>, RefreshTokenValidator>();
+        services.AddScoped<IValidator<ChangePasswordInputDto>, ChangePasswordValidator>();
 
         return services;
-    }
-
-    private static void RegisterHandlers(IServiceCollection services, Assembly assembly)
-    {
-        var handlerTypes = new[]
-        {
-            typeof(ICommandHandler<,>),
-            typeof(IQueryHandler<,>),
-        };
-
-        foreach (var type in assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false }))
-        {
-            foreach (var serviceType in type.GetInterfaces())
-            {
-                if (serviceType.IsGenericType && handlerTypes.Contains(serviceType.GetGenericTypeDefinition()))
-                {
-                    services.AddTransient(serviceType, type);
-                }
-            }
-        }
     }
 }

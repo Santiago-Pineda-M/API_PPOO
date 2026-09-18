@@ -1,12 +1,10 @@
-using ApiPoo2.Application.Models;
-using ApiPoo2.Application.CQRS;
-using ApiPoo2.Application.CQRS.Auth.Commands.ChangePassword;
-using ApiPoo2.Application.CQRS.Auth.Commands.Login;
-using ApiPoo2.Application.CQRS.Auth.Commands.Logout;
-using ApiPoo2.Application.CQRS.Auth.Commands.RefreshToken;
-using ApiPoo2.Application.CQRS.Auth.Commands.Register;
-using ApiPoo2.Application.CQRS.Auth.Commands.RevokeRefreshToken;
-using ApiPoo2.WebApi.Contracts.Requests;
+using ApiPoo2.Application.DTOs;
+using ApiPoo2.Application.UseCases.Auth.ChangePassword;
+using ApiPoo2.Application.UseCases.Auth.Login;
+using ApiPoo2.Application.UseCases.Auth.Logout;
+using ApiPoo2.Application.UseCases.Auth.RefreshToken;
+using ApiPoo2.Application.UseCases.Auth.Register;
+using ApiPoo2.Application.UseCases.Auth.RevokeRefreshToken;
 using ApiPoo2.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,64 +15,62 @@ namespace ApiPoo2.WebApi.Controllers;
 [Route("api/auth")]
 public sealed class AuthController : ControllerBase
 {
-    private readonly IDispatcher _dispatcher;
+    private readonly RegisterUseCase _register;
+    private readonly LoginUseCase _login;
+    private readonly RefreshTokenUseCase _refreshToken;
+    private readonly LogoutUseCase _logout;
+    private readonly RevokeRefreshTokenUseCase _revokeRefreshToken;
+    private readonly ChangePasswordUseCase _changePassword;
 
-    public AuthController(IDispatcher dispatcher)
+    public AuthController(
+        RegisterUseCase register,
+        LoginUseCase login,
+        RefreshTokenUseCase refreshToken,
+        LogoutUseCase logout,
+        RevokeRefreshTokenUseCase revokeRefreshToken,
+        ChangePasswordUseCase changePassword)
     {
-        _dispatcher = dispatcher;
+        _register = register;
+        _login = login;
+        _refreshToken = refreshToken;
+        _logout = logout;
+        _revokeRefreshToken = revokeRefreshToken;
+        _changePassword = changePassword;
     }
 
     [HttpPost("register")]
-    public async Task<ActionResult<UserDto>> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
-    {
-        var result = await _dispatcher.SendAsync<RegisterCommand, UserDto>(
-            new RegisterCommand(request.Email, request.Password),
-            cancellationToken);
-
-        return StatusCode(StatusCodes.Status201Created, result);
-    }
+    public async Task<ActionResult<RegisterUserDto>> Register([FromBody] RegisterInputDto request, CancellationToken cancellationToken)
+        => StatusCode(StatusCodes.Status201Created, await _register.ExecuteAsync(request, cancellationToken));
 
     [HttpPost("login")]
-    public async Task<ActionResult<TokenPairDto>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
-    {
-        var result = await _dispatcher.SendAsync<LoginCommand, TokenPairDto>(
-            new LoginCommand(request.Email, request.Password),
-            cancellationToken);
-
-        return Ok(result);
-    }
+    public async Task<ActionResult<LoginTokenPairDto>> Login([FromBody] LoginInputDto request, CancellationToken cancellationToken)
+        => Ok(await _login.ExecuteAsync(request, cancellationToken));
 
     [HttpPost("refresh")]
-    public async Task<ActionResult<TokenPairDto>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
-    {
-        var result = await _dispatcher.SendAsync<RefreshTokenCommand, TokenPairDto>(
-            new RefreshTokenCommand(request.RefreshToken),
-            cancellationToken);
-
-        return Ok(result);
-    }
+    public async Task<ActionResult<RefreshTokenPairDto>> Refresh([FromBody] RefreshTokenInputDto request, CancellationToken cancellationToken)
+        => Ok(await _refreshToken.ExecuteAsync(request, cancellationToken));
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] LogoutRequest? request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout([FromBody] LogoutInputDto? body, CancellationToken cancellationToken)
     {
-        await _dispatcher.SendAsync<LogoutCommand, OperationResult>(
-            new LogoutCommand(
-                User.GetUserId(),
-                User.GetTokenJti(),
-                User.GetTokenExpiresAtUtc(),
-                request?.RefreshToken),
-            cancellationToken);
+        var request = new LogoutInputDto(
+            User.GetUserId(),
+            User.GetTokenJti(),
+            User.GetTokenExpiresAtUtc(),
+            body?.RefreshToken);
+
+        await _logout.ExecuteAsync(request, cancellationToken);
 
         return NoContent();
     }
 
     [Authorize]
     [HttpPost("revoke-token")]
-    public async Task<IActionResult> RevokeToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> RevokeToken([FromBody] RevokeRefreshTokenInputDto body, CancellationToken cancellationToken)
     {
-        await _dispatcher.SendAsync<RevokeRefreshTokenCommand, OperationResult>(
-            new RevokeRefreshTokenCommand(User.GetUserId(), request.RefreshToken),
+        await _revokeRefreshToken.ExecuteAsync(
+            new RevokeRefreshTokenInputDto(User.GetUserId(), body.RefreshToken),
             cancellationToken);
 
         return NoContent();
@@ -82,10 +78,10 @@ public sealed class AuthController : ControllerBase
 
     [Authorize]
     [HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordInputDto body, CancellationToken cancellationToken)
     {
-        await _dispatcher.SendAsync<ChangePasswordCommand, OperationResult>(
-            new ChangePasswordCommand(User.GetUserId(), request.CurrentPassword, request.NewPassword),
+        await _changePassword.ExecuteAsync(
+            new ChangePasswordInputDto(User.GetUserId(), body.CurrentPassword, body.NewPassword),
             cancellationToken);
 
         return NoContent();
