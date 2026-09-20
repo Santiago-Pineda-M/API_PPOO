@@ -2,6 +2,8 @@
 
 .NET 10 Clean Architecture auth API (register / login / JWT access + rotating refresh tokens / token blacklist). PostgreSQL via Npgsql. Team writes code identifiers in English but user-facing messages in Spanish.
 
+> Manual completo de arquitectura, responsabilidades por capa, estructura de directorios y convenciones: **`ARCHITECTURE.md`**.
+
 ## Layout
 
 - `src/ApiPoo2.Domain` — entities, value objects, domain events/exceptions. No project refs.
