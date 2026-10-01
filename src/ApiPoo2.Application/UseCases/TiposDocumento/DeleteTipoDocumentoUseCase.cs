@@ -2,17 +2,17 @@ using ApiPoo2.Application.UseCases.Auth;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Documentos;
+namespace ApiPoo2.Application.UseCases.TiposDocumento;
 
-public sealed class DeleteDocumentoUseCase : BaseUseCase<DeleteDocumentoInputDto, OperationResult>
+public sealed class DeleteTipoDocumentoUseCase : BaseUseCase<DeleteTipoDocumentoInputDto, OperationResult>
 {
-    private readonly IDocumentoRepository _documentoRepository;
+    private readonly ITipoDocumentoRepository _documentoRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public DeleteDocumentoUseCase(
-        IEnumerable<IValidator<DeleteDocumentoInputDto>> validators,
+    public DeleteTipoDocumentoUseCase(
+        IEnumerable<IValidator<DeleteTipoDocumentoInputDto>> validators,
         ILoggerFactory loggerFactory,
-        IDocumentoRepository documentoRepository,
+        ITipoDocumentoRepository documentoRepository,
         IUnitOfWork unitOfWork)
         : base(validators, loggerFactory)
     {
@@ -21,13 +21,13 @@ public sealed class DeleteDocumentoUseCase : BaseUseCase<DeleteDocumentoInputDto
     }
 
     protected override async Task<OperationResult> ExecuteCoreAsync(
-        DeleteDocumentoInputDto request,
+        DeleteTipoDocumentoInputDto request,
         CancellationToken cancellationToken)
     {
-        var documento = await _documentoRepository.GetByIdAsync(request.DocumentoId, cancellationToken)
+        var documento = await _documentoRepository.GetByIdAsync(request.TipoDocumentoId, cancellationToken)
             ?? throw new NotFoundException("document.not_found", "El documento no existe.");
 
-        if (await _documentoRepository.ExistsByDocumentoIdAsync(documento.Id, cancellationToken))
+        if (await _documentoRepository.ExistsByTipoDocumentoIdAsync(documento.Id, cancellationToken))
         {
             throw new ConflictException(
                 "document.has_files",

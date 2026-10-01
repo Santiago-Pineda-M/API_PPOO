@@ -1,16 +1,16 @@
 using ApiPoo2.Domain.Common;
 
-namespace ApiPoo2.Domain.Documentos;
+namespace ApiPoo2.Domain.TiposDocumento;
 
 /// <summary>
 ///     Relación entre vehículo y documento paramétrico. Acá vive el archivo: un mismo tipo de
 ///     documento puede estar asociado a muchos vehículos sin compartir el contenido.
 /// </summary>
-public sealed class VehiculoDocumento
+public sealed class DocumentoVehiculo
 {
     public Guid VehiculoId { get; private set; }
 
-    public Guid DocumentoId { get; private set; }
+    public Guid TipoDocumentoId { get; private set; }
 
     public NombreArchivo NombreArchivo { get; private set; } = null!;
 
@@ -26,13 +26,13 @@ public sealed class VehiculoDocumento
 
     public DateTime? UpdatedAtUtc { get; private set; }
 
-    private VehiculoDocumento()
+    private DocumentoVehiculo()
     {
     }
 
-    public static VehiculoDocumento Crear(
+    public static DocumentoVehiculo Crear(
         Guid vehiculoId,
-        Guid documentoId,
+        Guid tipoDocumentoId,
         byte[] contenido,
         string nombreArchivo,
         DateTime fechaExpedicion,
@@ -46,7 +46,7 @@ public sealed class VehiculoDocumento
                 ["El vehículo es obligatorio."]);
         }
 
-        if (documentoId == Guid.Empty)
+        if (tipoDocumentoId == Guid.Empty)
         {
             throw new DomainValidationException(
                 "vehiculo_documento.documento",
@@ -67,10 +67,10 @@ public sealed class VehiculoDocumento
                 ["La fecha de expedición no puede ser futura."]);
         }
 
-        var relacion = new VehiculoDocumento
+        var relacion = new DocumentoVehiculo
         {
             VehiculoId = vehiculoId,
-            DocumentoId = documentoId,
+            TipoDocumentoId = tipoDocumentoId,
             NombreArchivo = NombreArchivo.From(nombreArchivo),
             Contenido = ContenidoDocumento.From(contenido, nombreArchivo),
             FechaExpedicion = fechaExpedicion,

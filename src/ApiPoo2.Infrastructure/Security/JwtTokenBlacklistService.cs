@@ -40,7 +40,7 @@ public sealed class JwtTokenBlacklistService : IJwtTokenBlacklistService
         return blacklisted;
     }
 
-    public async Task BlacklistAsync(Guid jti, Guid userId, DateTime expiresAtUtc, CancellationToken cancellationToken = default)
+    public async Task BlacklistAsync(Guid jti, Guid personaId, DateTime expiresAtUtc, CancellationToken cancellationToken = default)
     {
         var now = _dateTimeProvider.UtcNow;
 
@@ -49,7 +49,7 @@ public sealed class JwtTokenBlacklistService : IJwtTokenBlacklistService
             return;
         }
 
-        var entry = BlacklistedToken.Create(jti, userId, expiresAtUtc, now);
+        var entry = BlacklistedToken.Create(jti, personaId, expiresAtUtc, now);
         _repository.Add(entry);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

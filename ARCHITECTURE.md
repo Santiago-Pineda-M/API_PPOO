@@ -60,7 +60,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 
 - **Cero dependencias** de proyecto y cero librerías externas.
 - Entidades con setters privados; **mutación solo por métodos/factorías de dominio** (ej. `Persona.CrearUsuario`, `User.Crear`, `Vehiculo.Register`, `Vehiculo.AdjuntarDocumento`, `Vehiculo.Actualizar`, `Documento.Register`, `User.ChangePassword`, `User.RegenerarApiKey`, `RefreshToken.Issue`, `RefreshToken.RotateTo`).
-- Identidad normalmente `Guid` con `BaseEntity.Initialize` y `MarkUpdated(utcNow)` en toda mutación. Excepciones documentadas por PK compuesta: `User` (`idpersona + login`) y `VehiculoDocumento` (`idvehiculo + iddocumento`).
+- Identidad normalmente `Guid` con `BaseEntity.Initialize` y `MarkUpdated(utcNow)` en toda mutación. Excepciones documentadas por PK compuesta: `User` (`id_persona + login`) y `DocumentoVehiculo` (`id_vehiculo + id_tipo_documento`).
 - No hay eventos de dominio; tampoco se registran estados en constructores.
 
 ### 3.2 ApiPoo2.Application (depende solo de Domain)
@@ -71,7 +71,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 - **Validators** FluentValidation (uno por use case que lo requiera, junto al use case).
 - **DTOs** de entrada/salida junto al caso de uso que los produce — ver convenciones en §6.
 - **Excepciones de aplicación**: `BaseApplicationException` y subclases (`UnauthorizedException`, `NotFoundException`, `ConflictException`, `ForbiddenException`, `RequestValidationException`) con `code` estable.
-- **Puertos (interfaces)**: `IRepositories/` (`IRepository<T>`, `IPersonaRepository`, `IUserRepository`, `IVehiculoRepository`, `IDocumentoRepository`, `IConductorVehiculoRepository`, `IRefreshTokenRepository`, `IBlacklistedTokenRepository`, `IUnitOfWork`) e `IServices/` (`IPasswordHasher`, `IJwtTokenService`, `IJwtTokenBlacklistService`, `IDateTimeProvider`, `JwtOptions`).
+- **Puertos (interfaces)**: `IRepositories/` (`IRepository<T>`, `IPersonaRepository`, `IUserRepository`, `IVehiculoRepository`, `ITipoDocumentoRepository`, `IConductorVehiculoRepository`, `IRefreshTokenRepository`, `IBlacklistedTokenRepository`, `IUnitOfWork`) e `IServices/` (`IPasswordHasher`, `IJwtTokenService`, `IJwtTokenBlacklistService`, `IDateTimeProvider`, `JwtOptions`).
 - `DependencyInjection.AddApplication()` registra **explícitamente** use cases y validators (`AddScoped`), sin reflection.
 
 **Reglas / limitaciones**
@@ -109,7 +109,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 - **Composición root**: `Program.cs` (`public partial class Program`), registro de ambas capas inferiores y middleware.
 - **Controllers**: endpoints REST. Inyectan use cases concretos por constructor (uno por endpoint) y bindean los `InputDto` de Application como `[FromBody]` o los arman con valores de ruta/claims.
 - **Seguridad dual**: JWT autentica; la policy `ApiKey` exige además `X-Api-Key` y que pertenezca al usuario autenticado. Los endpoints de escritura de E1/E2 la requieren; las consultas públicas usan `[AllowAnonymous]`.
-- **Extensiones de claims**: `GetUserId()`, `GetTokenJti()`, `GetTokenExpiresAtUtc()` fabrican campos derivados del access token (nunca vienen del body del cliente).
+- **Extensiones de claims**: `GetPersonaId()`, `GetTokenJti()`, `GetTokenExpiresAtUtc()` fabrican campos derivados del access token (nunca vienen del body del cliente).
 - **Middleware de errores**: `ExceptionHandlingMiddleware` mapea excepciones tipadas a `application/problem+json` `{status, code, message, errors, traceId}`.
 - Configuración Swagger.
 
@@ -132,7 +132,7 @@ ApiPoo2.sln
 │   │   ├── Users/            User, PasswordHash, UserRole, AuthenticationBlock
 │   │   ├── Personas/         Persona, ConductorVehiculo, Login, ApiKey, identificaciones y tipos
 │   │   ├── Vehiculos/        Vehiculo, Placa, Color, Marca, Linea y tipos
-│   │   ├── Documentos/       Documento, VehiculoDocumento y contenido
+│   │   ├── TiposDocumento/   TipoDocumento, DocumentoVehiculo y contenido
 │   │   ├── RefreshTokens/    RefreshToken, RevocationReason
 │   │   ├── BlacklistedTokens/ BlacklistedToken
 │   │   └── Common/           BaseEntity, PasswordPolicy, DomainException, DomainValidationException
@@ -161,7 +161,7 @@ ApiPoo2.sln
 │   │   └── DependencyInjection.cs
 │   └── ApiPoo2.WebApi/
 │       ├── Auth/             ApiKeyRequirement, ApiKeyHandler
-│       ├── Controllers/      AuthController, PersonasController, UsuariosController, VehiculosController, DocumentosController, ConductoresController, UsersController
+│       ├── Controllers/      AuthController, PersonasController, UsuariosController, VehiculosController, TiposDocumentoController, ConductoresController, UsersController
 │       ├── Extensions/       ClaimsPrincipalExtensions, SwaggerExtensions
 │       ├── Middleware/       ExceptionHandlingMiddleware
 │       └── Program.cs
@@ -279,11 +279,11 @@ Reglas:
 
 | Columna | Tipo | Nota |
 |---|---|---|
-| `idpersona` | uuid (PK, FK→personas, cascade) | parte 1 de la PK compuesta |
+| `id_persona` | uuid (PK, FK→personas, cascade) | parte 1 de la PK compuesta |
 | `login` | varchar(64) (PK) | mnemotécnico, parte 2 de la PK compuesta |
 | `password_hash` / `password_hash_algorithm` | varchar | BCrypt; nunca en claro |
 | `api_key` | varchar | **único**, autogenerada |
-| `rol` | varchar(20) | string del enum |
+| `role` | varchar(20) | string del enum |
 | `is_active` | bool | default true |
 | `access_failed_count` | int | lockout tras 5 fallos |
 | `lockout_end_utc` | timestamptz? | 15 min |
@@ -295,8 +295,8 @@ Reglas:
 | Columna | Tipo | Nota |
 |---|---|---|
 | `id` | uuid (PK) | |
-| `idpersona` | uuid (FK→personas, cascade) | |
-| `login` | varchar(64) (FK→usuarios, cascade) | junto con `idpersona` referencia la PK compuesta |
+| `id_persona` | uuid (FK→personas, cascade) | |
+| `login` | varchar(64) (FK→usuarios, cascade) | junto con `id_persona` referencia la PK compuesta |
 | `token_hash` | varchar(128) | **único** |
 | `expires_at_utc` | timestamptz | ≤ 7 días desde emisión |
 | `is_used` | bool | |
@@ -313,8 +313,8 @@ Reglas:
 | Columna | Tipo | Nota |
 |---|---|---|
 | `id` | uuid (PK) | |
-| `jti` | uuid | **único** |
-| `idpersona` | uuid | persona titular del token revocado |
+| `jwt_id` | uuid | **único** |
+| `id_persona` | uuid | persona titular del token revocado |
 | `expires_at_utc` | timestamptz | índice |
 | `revoked_at_utc` / `created_at_utc` | timestamptz | |
 
@@ -333,7 +333,7 @@ Reglas:
 | `marca` / `linea` | varchar(50) | |
 | `created_at_utc` / `updated_at_utc` | timestamptz | |
 
-**`documentos`**
+**`tipos_documento`**
 
 | Columna | Tipo | Nota |
 |---|---|---|
@@ -344,12 +344,12 @@ Reglas:
 | `codigo_obligatoriedad` | varchar(2) | `RA/RM/RR` + CHECK |
 | `descripcion` | varchar(500) | |
 
-**`vehiculos_documentos`**
+**`documentos_vehiculo`**
 
 | Columna | Tipo | Nota |
 |---|---|---|
-| `idvehiculo` | uuid (PK, FK→vehiculos, cascade) | parte 1 de la PK compuesta |
-| `iddocumento` | uuid (PK, FK→documentos, restrict) | parte 2 de la PK compuesta |
+| `id_vehiculo` | uuid (PK, FK→vehiculos, cascade) | parte 1 de la PK compuesta |
+| `id_tipo_documento` | uuid (PK, FK→documentos, restrict) | parte 2 de la PK compuesta |
 | `contenido` | `bytea` | PDF binario, no vacío + CHECK |
 | `nombre_archivo` | varchar(255) | |
 | `fecha_expedicion` | timestamptz | no futura |
@@ -362,11 +362,11 @@ Reglas:
 | Columna | Tipo | Nota |
 |---|---|---|
 | `id` | uuid (PK) | |
-| `idpersona` | uuid (FK→personas, cascade) | debe ser `CONDUCTOR` (dominio/caso de uso) |
-| `idvehiculo` | uuid (FK→vehiculos, cascade) | |
+| `id_persona` | uuid (FK→personas, cascade) | debe ser `CONDUCTOR` (dominio/caso de uso) |
+| `id_vehiculo` | uuid (FK→vehiculos, cascade) | |
 | `fecha_asociacion` | timestamptz | |
 | `estado` | varchar(2) | `PO/EA/RO` + CHECK |
-| pareja `idpersona + idvehiculo` | única | evita asociaciones duplicadas |
+| pareja `id_persona + id_vehiculo` | única | evita asociaciones duplicadas |
 
 ### 8.2 Datos en memoria
 
@@ -429,7 +429,7 @@ Al tocar código, verificá que:
 |---|---|---|
 | `PasswordPolicy` fuera de la entidad | `User` recibe el *hash*, no el secreto, así que la entidad no puede evaluar la política | Los casos de uso la invocan antes de hashear; `PasswordPolicyTests` fija el comportamiento |
 | `Pagination` sin uso | `PagedFilter`/`PagedResult` se usarán con el primer endpoint paginado | Listo para usar; cubierto por `PaginationTests` |
-| Login mnemotécnico y PK compuesta | `User` (`idpersona + login`) y `VehiculoDocumento` (`idvehiculo + iddocumento`) no heredan `BaseEntity` | Excepción documentada y testeada en `RichDomainModelTests` |
+| Login mnemotécnico y PK compuesta | `User` (`id_persona + login`) y `DocumentoVehiculo` (`id_vehiculo + id_tipo_documento`) no heredan `BaseEntity` | Excepción documentada y testeada en `RichDomainModelTests` |
 
 ## 13. Divergencias respecto de Robot/Api (referencia estructural)
 

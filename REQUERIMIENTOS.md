@@ -52,7 +52,7 @@ Entradas:
 - `marca`
 - `linea`
 - Documento inicial:
-  - `documentoId`
+  - `tipoDocumentoId`
   - PDF en Base64
   - `nombreArchivo`
   - `fechaExpedicion`
@@ -167,7 +167,7 @@ Criterios de entrega:
 
 Contrato:
 
-- `POST /api/documentos`
+- `POST /api/tipos-documento`
 
 Entradas:
 
@@ -187,8 +187,8 @@ Criterios de entrega:
 
 Contrato:
 
-- `GET /api/documentos`
-- `GET /api/documentos/{id}`
+- `GET /api/tipos-documento`
+- `GET /api/tipos-documento/{id}`
 
 Criterios de entrega:
 
@@ -199,7 +199,7 @@ Criterios de entrega:
 
 Contrato:
 
-- `PUT /api/documentos/{id}`
+- `PUT /api/tipos-documento/{id}`
 
 Criterios de entrega:
 
@@ -211,7 +211,7 @@ Criterios de entrega:
 
 Contrato:
 
-- `DELETE /api/documentos/{id}`
+- `DELETE /api/tipos-documento/{id}`
 
 Criterios de entrega:
 
@@ -285,7 +285,7 @@ Reglas:
 
 - Solo personas `Administrativo`.
 - Relación uno a uno entre persona y usuario.
-- Primary key compuesta: `idpersona` + `login`.
+- Primary key compuesta: `id_persona` + `login`.
 - Login mnemotécnico: primera letra del nombre + primera letra del apellido + número de identificación.
 - Colisiones entre homónimos: sufijo incremental documentado.
 - Contraseña temporal y APIKey generadas automáticamente.
@@ -475,18 +475,18 @@ Tablas:
 - `usuarios`
 - `refresh_tokens`
 - `vehiculos`
-- `documentos`
-- `vehiculos_documentos`
+- `tipos_documento`
+- `documentos_vehiculo`
 - `conductores_vehiculos`
 - `access_token_blacklist`
 
 Restricciones mínimas:
 
 - `personas`: tipo de identificación, tipo de persona, número numérico, correo con formato y único.
-- `usuarios`: PK compuesta `idpersona + login`, APIKey única.
+- `usuarios`: PK compuesta `id_persona + login`, APIKey única.
 - `vehiculos`: placa única y con formato según tipo; tipo, servicio, combustible, capacidad, modelo y color validados.
-- `documentos`: tipos aplicables `A/M/AM`; obligatoriedad `RA/RM/RR`.
-- `vehiculos_documentos`: estado válido y contenido no vacío.
+- `tipos_documento`: tipos aplicables `A/M/AM`; obligatoriedad `RA/RM/RR`.
+- `documentos_vehiculo`: estado válido y contenido no vacío.
 - `conductores_vehiculos`: estado `PO/EA/RO` y pareja persona-vehículo única.
 
 Invariantes que la base no puede imponer sola:

@@ -6,9 +6,9 @@ internal static class VehiculoConsultaMapper
 {
     public static VehiculoConsultaOutputDto FromVehiculo(Vehiculo vehiculo, DateTime ahora)
     {
-        var documentos = vehiculo.GetDocumentos()
-            .Select(d => new DocumentoVehiculoOutputDto(
-                d.DocumentoId,
+        var documentos = vehiculo.GetTiposDocumento()
+            .Select(d => new DocumentoVehiculoConsultaOutputDto(
+                d.TipoDocumentoId,
                 d.NombreArchivo.Value,
                 d.Contenido.ContentType,
                 d.FechaExpedicion,

@@ -1,6 +1,6 @@
 using ApiPoo2.Domain.Common;
 using ApiPoo2.Domain.BlacklistedTokens;
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.RefreshTokens;
 using ApiPoo2.Domain.Users;
@@ -21,9 +21,9 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();
 
-    public DbSet<Documento> Documentos => Set<Documento>();
+    public DbSet<TipoDocumento> TiposDocumento => Set<TipoDocumento>();
 
-    public DbSet<VehiculoDocumento> VehiculosDocumentos => Set<VehiculoDocumento>();
+    public DbSet<DocumentoVehiculo> DocumentosVehiculo => Set<DocumentoVehiculo>();
 
     public DbSet<ConductorVehiculo> ConductoresVehiculos => Set<ConductorVehiculo>();
 

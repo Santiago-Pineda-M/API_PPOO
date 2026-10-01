@@ -8,7 +8,7 @@ public static class ClaimsPrincipalExtensions
     private const string JtiClaim = "jti";
     private const string ExpClaim = "exp";
 
-    public static Guid GetUserId(this ClaimsPrincipal principal)
+    public static Guid GetPersonaId(this ClaimsPrincipal principal)
         => Guid.Parse(principal.FindFirstValue(SubClaim)
             ?? throw new UnauthorizedAccessException("El token no contiene el identificador del usuario."));
 

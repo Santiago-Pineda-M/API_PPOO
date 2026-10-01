@@ -1,6 +1,6 @@
 using ApiPoo2.Domain.Common;
 
-namespace ApiPoo2.Domain.Documentos;
+namespace ApiPoo2.Domain.TiposDocumento;
 
 public sealed class NombreArchivo
 {

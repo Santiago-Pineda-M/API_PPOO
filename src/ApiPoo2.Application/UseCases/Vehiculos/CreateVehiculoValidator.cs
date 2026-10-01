@@ -26,7 +26,7 @@ public sealed class CreateVehiculoValidator : AbstractValidator<CreateVehiculoIn
         RuleFor(x => x.Marca).NotEmpty().WithMessage("La marca es obligatoria.");
         RuleFor(x => x.Linea).NotEmpty().WithMessage("La línea es obligatoria.");
 
-        RuleFor(x => x.DocumentoId).NotEmpty().WithMessage("Debe indicar el tipo de documento asociado.");
+        RuleFor(x => x.TipoDocumentoId).NotEmpty().WithMessage("Debe indicar el tipo de documento asociado.");
         RuleFor(x => x.DocumentoBase64).NotEmpty().WithMessage("El contenido del documento es obligatorio.");
         RuleFor(x => x.NombreArchivo).NotEmpty().WithMessage("El nombre del archivo es obligatorio.");
 

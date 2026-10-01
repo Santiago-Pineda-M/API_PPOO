@@ -1,4 +1,4 @@
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.Vehiculos;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;

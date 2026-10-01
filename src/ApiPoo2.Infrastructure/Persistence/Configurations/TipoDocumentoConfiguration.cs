@@ -1,19 +1,19 @@
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Vehiculos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ApiPoo2.Infrastructure.Persistence.Configurations;
 
-public sealed class DocumentoConfiguration : IEntityTypeConfiguration<Documento>
+public sealed class TipoDocumentoConfiguration : IEntityTypeConfiguration<TipoDocumento>
 {
-    public void Configure(EntityTypeBuilder<Documento> builder)
+    public void Configure(EntityTypeBuilder<TipoDocumento> builder)
     {
-        builder.ToTable("documentos");
+        builder.ToTable("tipos_documento");
 
-        builder.HasCheckConstraint("ck_documentos_tipos_vehiculo_aplicables",
+        builder.HasCheckConstraint("ck_tipos_documento_tipos_vehiculo_aplicables",
             "tipos_vehiculo_aplicables IN ('A','M','AM')");
-        builder.HasCheckConstraint("ck_documentos_codigo_obligatoriedad",
+        builder.HasCheckConstraint("ck_tipos_documento_codigo_obligatoriedad",
             "codigo_obligatoriedad IN ('RA','RM','RR')");
 
         builder.HasKey(d => d.Id);
@@ -23,13 +23,13 @@ public sealed class DocumentoConfiguration : IEntityTypeConfiguration<Documento>
 
         builder.Property(d => d.Codigo)
             .HasColumnName("codigo")
-            .HasConversion(c => c.Value, c => DocumentoCodigo.From(c))
+            .HasConversion(c => c.Value, c => TipoDocumentoCodigo.From(c))
             .HasMaxLength(30)
             .IsRequired();
 
         builder.Property(d => d.Nombre)
             .HasColumnName("nombre")
-            .HasConversion(n => n.Value, n => DocumentoNombre.From(n))
+            .HasConversion(n => n.Value, n => TipoDocumentoNombre.From(n))
             .HasMaxLength(100)
             .IsRequired();
 
@@ -47,7 +47,7 @@ public sealed class DocumentoConfiguration : IEntityTypeConfiguration<Documento>
 
         builder.Property(d => d.Descripcion)
             .HasColumnName("descripcion")
-            .HasConversion(x => x.Value, x => DocumentoDescripcion.From(x))
+            .HasConversion(x => x.Value, x => TipoDocumentoDescripcion.From(x))
             .HasMaxLength(500)
             .IsRequired();
 

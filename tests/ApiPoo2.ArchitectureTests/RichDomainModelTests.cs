@@ -16,14 +16,14 @@ public sealed class RichDomainModelTests
 
     /// <summary>
     ///     El enunciado exige primary key compuesta para Usuario ((idpersona, login)) y para la
-    ///     relación Vehiculo-Documento ((idvehiculo, iddocumento)), así que ninguna de las dos puede
+    ///     relación Vehiculo-TipoDocumento ((idvehiculo, iddocumento)), así que ninguna de las dos puede
     ///     heredar de BaseEntity. La excepción queda acá, explícita y testeada, para que nadie agregue
     ///     otra entidad fuera de BaseEntity sin darse cuenta.
     /// </summary>
     private static readonly (string Name, string Namespace)[] CompositeKeyEntities =
     [
         ("User", "ApiPoo2.Domain.Users"),
-        ("VehiculoDocumento", "ApiPoo2.Domain.Documentos"),
+        ("DocumentoVehiculo", "ApiPoo2.Domain.TiposDocumento"),
     ];
 
     private static IEnumerable<Type> RichEntities() =>
@@ -69,7 +69,7 @@ public sealed class RichDomainModelTests
         entities.Should().BeEquivalentTo(
             allowlisted,
             "toda entidad fuera de BaseEntity debe declararse acá con su justificación; " +
-            "User y VehiculoDocumento tienen PK compuesta por requerimiento del enunciado");
+            "User y DocumentoVehiculo tienen PK compuesta por requerimiento del enunciado");
     }
 
     [Fact]

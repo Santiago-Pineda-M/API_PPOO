@@ -1,4 +1,4 @@
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.Vehiculos;
 using FluentValidation;
@@ -45,22 +45,22 @@ public sealed class GetConductoresOperablesUseCase
 
 public sealed record GetDocumentosPorVencerInputDto(int Dias);
 
-public sealed record DocumentoVencimientoOutputDto(
+public sealed record DocumentoVehiculoVencimientoOutputDto(
     Guid VehiculoId,
-    Guid DocumentoId,
+    Guid TipoDocumentoId,
     DateTime FechaVencimiento,
     EstadoDocumento Estado);
 
 public sealed class GetDocumentosPorVencerUseCase
-    : BaseUseCase<GetDocumentosPorVencerInputDto, IReadOnlyList<DocumentoVencimientoOutputDto>>
+    : BaseUseCase<GetDocumentosPorVencerInputDto, IReadOnlyList<DocumentoVehiculoVencimientoOutputDto>>
 {
-    private readonly IDocumentoRepository _documentoRepository;
+    private readonly ITipoDocumentoRepository _documentoRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
 
     public GetDocumentosPorVencerUseCase(
         IEnumerable<IValidator<GetDocumentosPorVencerInputDto>> validators,
         ILoggerFactory loggerFactory,
-        IDocumentoRepository documentoRepository,
+        ITipoDocumentoRepository documentoRepository,
         IDateTimeProvider dateTimeProvider)
         : base(validators, loggerFactory)
     {
@@ -68,7 +68,7 @@ public sealed class GetDocumentosPorVencerUseCase
         _dateTimeProvider = dateTimeProvider;
     }
 
-    protected override async Task<IReadOnlyList<DocumentoVencimientoOutputDto>> ExecuteCoreAsync(
+    protected override async Task<IReadOnlyList<DocumentoVehiculoVencimientoOutputDto>> ExecuteCoreAsync(
         GetDocumentosPorVencerInputDto request,
         CancellationToken cancellationToken)
     {
@@ -81,9 +81,9 @@ public sealed class GetDocumentosPorVencerUseCase
         var documentos = await _documentoRepository.GetPorVencerAsync(ahora, request.Dias, cancellationToken);
 
         return documentos
-            .Select(d => new DocumentoVencimientoOutputDto(
+            .Select(d => new DocumentoVehiculoVencimientoOutputDto(
                 d.VehiculoId,
-                d.DocumentoId,
+                d.TipoDocumentoId,
                 d.FechaVencimiento,
                 d.EstadoActual(ahora)))
             .OrderBy(d => d.FechaVencimiento)
@@ -91,18 +91,18 @@ public sealed class GetDocumentosPorVencerUseCase
     }
 }
 
-public sealed record GetVehiculosDocumentsVencidosInputDto;
+public sealed record GetVehiculosDocumentosVencidosInputDto;
 
 public sealed class GetVehiculosDocumentosVencidosUseCase
-    : BaseUseCase<GetVehiculosDocumentsVencidosInputDto, IReadOnlyList<DocumentoVencimientoOutputDto>>
+    : BaseUseCase<GetVehiculosDocumentosVencidosInputDto, IReadOnlyList<DocumentoVehiculoVencimientoOutputDto>>
 {
-    private readonly IDocumentoRepository _documentoRepository;
+    private readonly ITipoDocumentoRepository _documentoRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
 
     public GetVehiculosDocumentosVencidosUseCase(
-        IEnumerable<IValidator<GetVehiculosDocumentsVencidosInputDto>> validators,
+        IEnumerable<IValidator<GetVehiculosDocumentosVencidosInputDto>> validators,
         ILoggerFactory loggerFactory,
-        IDocumentoRepository documentoRepository,
+        ITipoDocumentoRepository documentoRepository,
         IDateTimeProvider dateTimeProvider)
         : base(validators, loggerFactory)
     {
@@ -110,17 +110,17 @@ public sealed class GetVehiculosDocumentosVencidosUseCase
         _dateTimeProvider = dateTimeProvider;
     }
 
-    protected override async Task<IReadOnlyList<DocumentoVencimientoOutputDto>> ExecuteCoreAsync(
-        GetVehiculosDocumentsVencidosInputDto request,
+    protected override async Task<IReadOnlyList<DocumentoVehiculoVencimientoOutputDto>> ExecuteCoreAsync(
+        GetVehiculosDocumentosVencidosInputDto request,
         CancellationToken cancellationToken)
     {
         var ahora = _dateTimeProvider.UtcNow;
         var documentos = await _documentoRepository.GetVencidosAsync(ahora, cancellationToken);
 
         return documentos
-            .Select(d => new DocumentoVencimientoOutputDto(
+            .Select(d => new DocumentoVehiculoVencimientoOutputDto(
                 d.VehiculoId,
-                d.DocumentoId,
+                d.TipoDocumentoId,
                 d.FechaVencimiento,
                 EstadoDocumento.Vencido))
             .ToList();

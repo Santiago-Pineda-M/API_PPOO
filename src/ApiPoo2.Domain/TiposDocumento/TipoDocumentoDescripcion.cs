@@ -1,16 +1,16 @@
 using ApiPoo2.Domain.Common;
 
-namespace ApiPoo2.Domain.Documentos;
+namespace ApiPoo2.Domain.TiposDocumento;
 
-public sealed class DocumentoDescripcion
+public sealed class TipoDocumentoDescripcion
 {
     public const int MaxLength = 500;
 
     public string Value { get; }
 
-    private DocumentoDescripcion(string value) => Value = value;
+    private TipoDocumentoDescripcion(string value) => Value = value;
 
-    public static DocumentoDescripcion From(string value)
+    public static TipoDocumentoDescripcion From(string value)
     {
         var errors = new List<string>();
         var normalizado = value?.Trim() ?? string.Empty;
@@ -29,19 +29,19 @@ public sealed class DocumentoDescripcion
             throw new DomainValidationException("documento.descripcion", errors);
         }
 
-        return new DocumentoDescripcion(normalizado);
+        return new TipoDocumentoDescripcion(normalizado);
     }
 
-    public bool Equals(DocumentoDescripcion? other) => other is not null && Value == other.Value;
+    public bool Equals(TipoDocumentoDescripcion? other) => other is not null && Value == other.Value;
 
-    public override bool Equals(object? obj) => obj is DocumentoDescripcion otro && Equals(otro);
+    public override bool Equals(object? obj) => obj is TipoDocumentoDescripcion otro && Equals(otro);
 
     public override int GetHashCode() => Value.GetHashCode(StringComparison.Ordinal);
 
-    public static bool operator ==(DocumentoDescripcion? left, DocumentoDescripcion? right)
+    public static bool operator ==(TipoDocumentoDescripcion? left, TipoDocumentoDescripcion? right)
         => left is null ? right is null : left.Equals(right);
 
-    public static bool operator !=(DocumentoDescripcion? left, DocumentoDescripcion? right)
+    public static bool operator !=(TipoDocumentoDescripcion? left, TipoDocumentoDescripcion? right)
         => !(left == right);
 
     public override string ToString() => Value;

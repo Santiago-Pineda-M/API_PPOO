@@ -1,26 +1,26 @@
 using ApiPoo2.Infrastructure.Persistence.Converters;
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Vehiculos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ApiPoo2.Infrastructure.Persistence.Configurations;
 
-public sealed class VehiculoDocumentoConfiguration : IEntityTypeConfiguration<VehiculoDocumento>
+public sealed class DocumentoVehiculoConfiguration : IEntityTypeConfiguration<DocumentoVehiculo>
 {
-    public void Configure(EntityTypeBuilder<VehiculoDocumento> builder)
+    public void Configure(EntityTypeBuilder<DocumentoVehiculo> builder)
     {
-        builder.ToTable("vehiculos_documentos");
+        builder.ToTable("documentos_vehiculo");
 
-        builder.HasCheckConstraint("ck_vehiculos_documentos_estado",
+        builder.HasCheckConstraint("ck_documentos_vehiculo_estado",
             "estado IN ('HABILITADO','VENCIDO','EN_VERIFICACION')");
-        builder.HasCheckConstraint("ck_vehiculos_documentos_contenido",
+        builder.HasCheckConstraint("ck_documentos_vehiculo_contenido",
             "octet_length(contenido) > 0");
 
-        builder.HasKey(d => new { d.VehiculoId, d.DocumentoId });
+        builder.HasKey(d => new { d.VehiculoId, d.TipoDocumentoId });
 
-        builder.Property(d => d.VehiculoId).HasColumnName("idvehiculo");
-        builder.Property(d => d.DocumentoId).HasColumnName("iddocumento");
+        builder.Property(d => d.VehiculoId).HasColumnName("id_vehiculo");
+        builder.Property(d => d.TipoDocumentoId).HasColumnName("id_tipo_documento");
 
         builder.Property(d => d.NombreArchivo)
             .HasColumnName("nombre_archivo")
@@ -63,9 +63,9 @@ public sealed class VehiculoDocumentoConfiguration : IEntityTypeConfiguration<Ve
             .HasForeignKey(d => d.VehiculoId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne<Documento>()
+        builder.HasOne<TipoDocumento>()
             .WithMany()
-            .HasForeignKey(d => d.DocumentoId)
+            .HasForeignKey(d => d.TipoDocumentoId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

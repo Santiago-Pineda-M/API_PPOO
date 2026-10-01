@@ -1,18 +1,18 @@
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Documentos;
+namespace ApiPoo2.Application.UseCases.TiposDocumento;
 
-public sealed class UpdateDocumentoUseCase : BaseUseCase<UpdateDocumentoInputDto, DocumentoParametricoOutputDto>
+public sealed class UpdateTipoDocumentoUseCase : BaseUseCase<UpdateTipoDocumentoInputDto, TipoDocumentoOutputDto>
 {
-    private readonly IDocumentoRepository _documentoRepository;
+    private readonly ITipoDocumentoRepository _documentoRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UpdateDocumentoUseCase(
-        IEnumerable<IValidator<UpdateDocumentoInputDto>> validators,
+    public UpdateTipoDocumentoUseCase(
+        IEnumerable<IValidator<UpdateTipoDocumentoInputDto>> validators,
         ILoggerFactory loggerFactory,
-        IDocumentoRepository documentoRepository,
+        ITipoDocumentoRepository documentoRepository,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
         : base(validators, loggerFactory)
@@ -22,11 +22,11 @@ public sealed class UpdateDocumentoUseCase : BaseUseCase<UpdateDocumentoInputDto
         _unitOfWork = unitOfWork;
     }
 
-    protected override async Task<DocumentoParametricoOutputDto> ExecuteCoreAsync(
-        UpdateDocumentoInputDto request,
+    protected override async Task<TipoDocumentoOutputDto> ExecuteCoreAsync(
+        UpdateTipoDocumentoInputDto request,
         CancellationToken cancellationToken)
     {
-        var documento = await _documentoRepository.GetByIdAsync(request.DocumentoId, cancellationToken)
+        var documento = await _documentoRepository.GetByIdAsync(request.TipoDocumentoId, cancellationToken)
             ?? throw new NotFoundException("document.not_found", "El documento no existe.");
 
         documento.Actualizar(
@@ -38,7 +38,7 @@ public sealed class UpdateDocumentoUseCase : BaseUseCase<UpdateDocumentoInputDto
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new DocumentoParametricoOutputDto(
+        return new TipoDocumentoOutputDto(
             documento.Id,
             documento.Codigo.Value,
             documento.Nombre.Value,

@@ -20,5 +20,5 @@ public sealed class UsersController : ControllerBase
 
     [HttpGet("me")]
     public async Task<ActionResult<CurrentUserOutputDto>> GetCurrentUser(CancellationToken cancellationToken)
-        => Ok(await _getCurrentUser.ExecuteAsync(new GetCurrentUserInputDto(User.GetUserId()), cancellationToken));
+        => Ok(await _getCurrentUser.ExecuteAsync(new GetCurrentUserInputDto(User.GetPersonaId()), cancellationToken));
 }

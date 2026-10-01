@@ -1,4 +1,4 @@
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Vehiculos;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
@@ -35,26 +35,26 @@ public sealed class GetVehiculosByTipoUseCase
             .ToList();
 }
 
-public sealed record GetVehiculosByDocumentoInputDto(string Codigo);
+public sealed record GetVehiculosByTipoDocumentoInputDto(string Codigo);
 
-public sealed class GetVehiculosByDocumentoUseCase
-    : BaseUseCase<GetVehiculosByDocumentoInputDto, IReadOnlyList<VehiculoResumenOutputDto>>
+public sealed class GetVehiculosByTipoDocumentoUseCase
+    : BaseUseCase<GetVehiculosByTipoDocumentoInputDto, IReadOnlyList<VehiculoResumenOutputDto>>
 {
-    private readonly IDocumentoRepository _documentoRepository;
+    private readonly ITipoDocumentoRepository _documentoRepository;
 
-    public GetVehiculosByDocumentoUseCase(
-        IEnumerable<IValidator<GetVehiculosByDocumentoInputDto>> validators,
+    public GetVehiculosByTipoDocumentoUseCase(
+        IEnumerable<IValidator<GetVehiculosByTipoDocumentoInputDto>> validators,
         ILoggerFactory loggerFactory,
-        IDocumentoRepository documentoRepository)
+        ITipoDocumentoRepository documentoRepository)
         : base(validators, loggerFactory)
     {
         _documentoRepository = documentoRepository;
     }
 
     protected override async Task<IReadOnlyList<VehiculoResumenOutputDto>> ExecuteCoreAsync(
-        GetVehiculosByDocumentoInputDto request,
+        GetVehiculosByTipoDocumentoInputDto request,
         CancellationToken cancellationToken)
-        => (await _documentoRepository.GetConDocumentoAsync(DocumentoCodigo.From(request.Codigo), cancellationToken))
+        => (await _documentoRepository.GetConTipoDocumentoAsync(TipoDocumentoCodigo.From(request.Codigo), cancellationToken))
             .Select(v => new VehiculoResumenOutputDto(v.Id, v.Placa.Value, v.TipoVehiculo, v.TipoServicio))
             .ToList();
 }
@@ -85,7 +85,7 @@ public sealed class GetVehiculosByEstadoDocumentoUseCase
         var ahora = _dateTimeProvider.UtcNow;
 
         return (await _vehiculoRepository.GetAllWithDetailsAsync(cancellationToken))
-            .Where(v => v.GetDocumentos().Any(d => d.EstadoActual(ahora) == request.Estado))
+            .Where(v => v.GetTiposDocumento().Any(d => d.EstadoActual(ahora) == request.Estado))
             .Select(v => new VehiculoResumenOutputDto(v.Id, v.Placa.Value, v.TipoVehiculo, v.TipoServicio))
             .ToList();
     }

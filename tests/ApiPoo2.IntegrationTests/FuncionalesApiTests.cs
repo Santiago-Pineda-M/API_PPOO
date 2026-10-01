@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.Vehiculos;
 using ApiPoo2.WebApi.Auth;
@@ -82,37 +82,37 @@ public sealed class FuncionalesApiTests
         await AutenticarComoSemillaAsync();
         var codigo = $"DOC{NumeroCorto()}";
 
-        var creado = await _client.PostAsync("/api/documentos", Json(new
+        var creado = await _client.PostAsync("/api/tipos-documento", Json(new
         {
             codigo,
-            nombre = "Documento funcional",
+            nombre = "TipoDocumento funcional",
             tiposVehiculoAplicables = "AM",
             codigoObligatoriedad = "RR",
             descripcion = "Catálogo para pruebas funcionales"
         }));
         creado.StatusCode.Should().Be(HttpStatusCode.Created);
-        var documento = await ReadAs<DocumentoDto>(creado);
+        var documento = await ReadAs<TipoDocumentoDto>(creado);
 
-        var listado = await _client.GetAsync("/api/documentos");
+        var listado = await _client.GetAsync("/api/tipos-documento");
         listado.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadAs<List<DocumentoDto>>(listado)).Should().Contain(d => d.Codigo == codigo);
+        (await ReadAs<List<TipoDocumentoDto>>(listado)).Should().Contain(d => d.Codigo == codigo);
 
-        var detalle = await _client.GetAsync($"/api/documentos/{documento.Id}");
+        var detalle = await _client.GetAsync($"/api/tipos-documento/{documento.Id}");
         detalle.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var actualizado = await _client.PutAsync($"/api/documentos/{documento.Id}", Json(new
+        var actualizado = await _client.PutAsync($"/api/tipos-documento/{documento.Id}", Json(new
         {
-            nombre = "Documento funcional actualizado",
+            nombre = "TipoDocumento funcional actualizado",
             tiposVehiculoAplicables = "A",
             codigoObligatoriedad = "RA",
             descripcion = "Solo automóviles"
         }));
         actualizado.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadAs<DocumentoDto>(actualizado)).Nombre.Should().Contain("actualizado");
+        (await ReadAs<TipoDocumentoDto>(actualizado)).Nombre.Should().Contain("actualizado");
 
-        var eliminado = await _client.DeleteAsync($"/api/documentos/{documento.Id}");
+        var eliminado = await _client.DeleteAsync($"/api/tipos-documento/{documento.Id}");
         eliminado.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await _client.GetAsync($"/api/documentos/{documento.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await _client.GetAsync($"/api/tipos-documento/{documento.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -120,10 +120,10 @@ public sealed class FuncionalesApiTests
     {
         await AutenticarComoSemillaAsync();
         var codigo = $"SOAT{NumeroCorto()}";
-        var documentoId = await RegistrarDocumentoAsync(codigo, "A", "RA");
+        var tipoDocumentoId = await RegistrarTipoDocumentoAsync(codigo, "A", "RA");
         var placa = PlacaUnica();
 
-        var vehiculo = await CrearVehiculoAsync(placa, documentoId);
+        var vehiculo = await CrearVehiculoAsync(placa, tipoDocumentoId);
         var detalle = await _client.GetAsync($"/api/vehiculos/{vehiculo.Id}");
         detalle.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -166,7 +166,7 @@ public sealed class FuncionalesApiTests
         porTipo.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadAs<List<VehiculoResumenDto>>(porTipo)).Should().Contain(v => v.Id == vehiculo.Id);
 
-        var porDocumento = await _client.GetAsync($"/api/vehiculos/documento/{codigo}");
+        var porDocumento = await _client.GetAsync($"/api/vehiculos/tipo-documento/{codigo}");
         porDocumento.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadAs<List<VehiculoResumenDto>>(porDocumento)).Should().Contain(v => v.Id == vehiculo.Id);
 
@@ -175,7 +175,7 @@ public sealed class FuncionalesApiTests
         (await ReadAs<List<VehiculoResumenDto>>(enVerificacion)).Should().Contain(v => v.Id == vehiculo.Id);
 
         var habilitar = await _client.PutAsync(
-            $"/api/vehiculos/{vehiculo.Id}/documentos/{documentoId}/estado",
+            $"/api/vehiculos/{vehiculo.Id}/documentos/{tipoDocumentoId}/estado",
             Json(new { estado = 1 }));
         habilitar.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -183,14 +183,14 @@ public sealed class FuncionalesApiTests
         habilitados.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadAs<List<VehiculoResumenDto>>(habilitados)).Should().Contain(v => v.Id == vehiculo.Id);
 
-        var usado = await _client.DeleteAsync($"/api/documentos/{documentoId}");
+        var usado = await _client.DeleteAsync($"/api/tipos-documento/{tipoDocumentoId}");
         usado.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var eliminado = await _client.DeleteAsync($"/api/vehiculos/{vehiculo.Id}");
         eliminado.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await _client.GetAsync($"/api/vehiculos/{vehiculo.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        var liberarCatalogo = await _client.DeleteAsync($"/api/documentos/{documentoId}");
+        var liberarCatalogo = await _client.DeleteAsync($"/api/tipos-documento/{tipoDocumentoId}");
         liberarCatalogo.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
@@ -226,21 +226,21 @@ public sealed class FuncionalesApiTests
         return await ReadAs<PersonaCreadaDto>(response);
     }
 
-    private async Task<Guid> RegistrarDocumentoAsync(string codigo, string tipos, string obligatoriedad)
+    private async Task<Guid> RegistrarTipoDocumentoAsync(string codigo, string tipos, string obligatoriedad)
     {
-        var response = await _client.PostAsync("/api/documentos", Json(new
+        var response = await _client.PostAsync("/api/tipos-documento", Json(new
         {
             codigo,
-            nombre = $"Documento {codigo}",
+            nombre = $"TipoDocumento {codigo}",
             tiposVehiculoAplicables = tipos,
             codigoObligatoriedad = obligatoriedad,
-            descripcion = "Documento funcional"
+            descripcion = "TipoDocumento funcional"
         }));
         response.EnsureSuccessStatusCode();
-        return (await ReadAs<DocumentoDto>(response)).Id;
+        return (await ReadAs<TipoDocumentoDto>(response)).Id;
     }
 
-    private async Task<VehiculoCreadoDto> CrearVehiculoAsync(string placa, Guid documentoId)
+    private async Task<VehiculoCreadoDto> CrearVehiculoAsync(string placa, Guid tipoDocumentoId)
     {
         var response = await _client.PostAsync("/api/vehiculos", Json(new
         {
@@ -253,7 +253,7 @@ public sealed class FuncionalesApiTests
             modelo = 2020,
             marca = "Toyota",
             linea = "Corolla",
-            documentoId,
+            tipoDocumentoId,
             documentoBase64 = Convert.ToBase64String("%PDF-1.4 funcional"u8.ToArray()),
             nombreArchivo = "soat.pdf",
             fechaExpedicion = DateTime.UtcNow.AddDays(-10),
@@ -283,18 +283,18 @@ public sealed class FuncionalesApiTests
 
     private sealed record PersonaDto(Guid Id, string? Nombres, string? CorreoElectronico, TipoPersona? TipoPersona);
 
-    private sealed record DocumentoDto(Guid Id, string? Codigo, string? Nombre);
+    private sealed record TipoDocumentoDto(Guid Id, string? Codigo, string? Nombre);
 
     private sealed record VehiculoCreadoDto(Guid Id);
 
     private sealed record VehiculoDetalleDto(
         Guid Id,
         string? Placa,
-        List<DocumentoDetalleDto> Documentos,
+        List<DocumentoVehiculoDetalleDto> Documentos,
         List<ConductorDetalleDto> Conductores);
 
-    private sealed record DocumentoDetalleDto(
-        Guid DocumentoId,
+    private sealed record DocumentoVehiculoDetalleDto(
+        Guid TipoDocumentoId,
         string? NombreArchivo,
         string? ContentType,
         DateTime FechaExpedicion,

@@ -1,29 +1,29 @@
 using ApiPoo2.Domain.Common;
 using ApiPoo2.Domain.Vehiculos;
 
-namespace ApiPoo2.Domain.Documentos;
+namespace ApiPoo2.Domain.TiposDocumento;
 
 /// <summary>
 ///     Entidad paramétrica: catálogo de documentos que pueden asociarse a vehículos. No guarda el
-///     archivo; el contenido vive en <see cref="VehiculoDocumento" />.
+///     archivo; el contenido vive en <see cref="DocumentoVehiculo" />.
 /// </summary>
-public sealed class Documento : BaseEntity
+public sealed class TipoDocumento : BaseEntity
 {
-    public DocumentoCodigo Codigo { get; private set; } = null!;
+    public TipoDocumentoCodigo Codigo { get; private set; } = null!;
 
-    public DocumentoNombre Nombre { get; private set; } = null!;
+    public TipoDocumentoNombre Nombre { get; private set; } = null!;
 
     public TiposVehiculoAplicables TiposVehiculoAplicables { get; private set; } = null!;
 
     public CodigoObligatoriedad CodigoObligatoriedad { get; private set; } = null!;
 
-    public DocumentoDescripcion Descripcion { get; private set; } = null!;
+    public TipoDocumentoDescripcion Descripcion { get; private set; } = null!;
 
-    private Documento()
+    private TipoDocumento()
     {
     }
 
-    public static Documento Register(
+    public static TipoDocumento Register(
         string codigo,
         string nombre,
         string tiposVehiculoAplicables,
@@ -31,13 +31,13 @@ public sealed class Documento : BaseEntity
         string descripcion,
         DateTime utcNow)
     {
-        var documento = new Documento
+        var documento = new TipoDocumento
         {
-            Codigo = DocumentoCodigo.From(codigo),
-            Nombre = DocumentoNombre.From(nombre),
+            Codigo = TipoDocumentoCodigo.From(codigo),
+            Nombre = TipoDocumentoNombre.From(nombre),
             TiposVehiculoAplicables = TiposVehiculoAplicables.From(tiposVehiculoAplicables),
             CodigoObligatoriedad = CodigoObligatoriedad.From(codigoObligatoriedad),
-            Descripcion = DocumentoDescripcion.From(descripcion),
+            Descripcion = TipoDocumentoDescripcion.From(descripcion),
         };
 
         documento.Initialize(Guid.NewGuid(), utcNow);
@@ -57,10 +57,10 @@ public sealed class Documento : BaseEntity
         string descripcion,
         DateTime utcNow)
     {
-        Nombre = DocumentoNombre.From(nombre);
+        Nombre = TipoDocumentoNombre.From(nombre);
         TiposVehiculoAplicables = TiposVehiculoAplicables.From(tiposVehiculoAplicables);
         CodigoObligatoriedad = CodigoObligatoriedad.From(codigoObligatoriedad);
-        Descripcion = DocumentoDescripcion.From(descripcion);
+        Descripcion = TipoDocumentoDescripcion.From(descripcion);
         MarkUpdated(utcNow);
     }
 }

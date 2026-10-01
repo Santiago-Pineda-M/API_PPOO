@@ -47,7 +47,7 @@ public sealed class AuthController : ControllerBase
     {
         await _logout.ExecuteAsync(
             new LogoutInputDto(
-                User.GetUserId(),
+                User.GetPersonaId(),
                 User.GetTokenJti(),
                 User.GetTokenExpiresAtUtc(),
                 body?.RefreshToken),
@@ -63,7 +63,7 @@ public sealed class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         await _revokeRefreshToken.ExecuteAsync(
-            new RevokeRefreshTokenInputDto(User.GetUserId(), body.RefreshToken),
+            new RevokeRefreshTokenInputDto(User.GetPersonaId(), body.RefreshToken),
             cancellationToken);
 
         return NoContent();
@@ -77,7 +77,7 @@ public sealed class AuthController : ControllerBase
     {
         await _changePassword.ExecuteAsync(
             new ChangePasswordInputDto(
-                User.GetUserId(),
+                User.GetPersonaId(),
                 body.CurrentPassword,
                 body.NewPassword,
                 User.GetTokenJti(),

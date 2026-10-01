@@ -1,5 +1,5 @@
 using ApiPoo2.Domain.Common;
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Personas;
 
 namespace ApiPoo2.Domain.Vehiculos;
@@ -24,7 +24,7 @@ public sealed class Vehiculo : BaseEntity
 
     public Linea Linea { get; private set; } = null!;
 
-    private List<VehiculoDocumento> Documentos { get; set; } = [];
+    private List<DocumentoVehiculo> Documentos { get; set; } = [];
 
     private List<ConductorVehiculo> Conductores { get; set; } = [];
 
@@ -79,8 +79,8 @@ public sealed class Vehiculo : BaseEntity
     ///     El enunciado exige registrar vehículo y documento en una sola operación: el vehículo
     ///     nunca queda sin documento y el documento nace En Verificación.
     /// </summary>
-    public VehiculoDocumento AdjuntarDocumento(
-        Documento documento,
+    public DocumentoVehiculo AdjuntarDocumento(
+        TipoDocumento documento,
         byte[] contenido,
         string nombreArchivo,
         DateTime fechaExpedicion,
@@ -96,14 +96,14 @@ public sealed class Vehiculo : BaseEntity
                 [$"El documento '{documento.Nombre.Value}' no aplica a vehículos de tipo {TipoVehiculo}."]);
         }
 
-        if (Documentos.Any(d => d.DocumentoId == documento.Id))
+        if (Documentos.Any(d => d.TipoDocumentoId == documento.Id))
         {
             throw new DomainValidationException(
                 "vehiculo.documento.duplicado",
                 ["El vehículo ya tiene asociado ese tipo de documento."]);
         }
 
-        var vehiculoDocumento = VehiculoDocumento.Crear(
+        var vehiculoDocumento = DocumentoVehiculo.Crear(
             Id,
             documento.Id,
             contenido,
@@ -191,8 +191,8 @@ public sealed class Vehiculo : BaseEntity
     /// <summary>
     ///     Carga un documento nuevo o reemplaza el archivo de uno ya asociado, como pide el enunciado.
     /// </summary>
-    public VehiculoDocumento GuardarDocumento(
-        Documento documento,
+    public DocumentoVehiculo GuardarDocumento(
+        TipoDocumento documento,
         byte[] contenido,
         string nombreArchivo,
         DateTime fechaExpedicion,
@@ -201,7 +201,7 @@ public sealed class Vehiculo : BaseEntity
     {
         ArgumentNullException.ThrowIfNull(documento);
 
-        var existente = Documentos.FirstOrDefault(d => d.DocumentoId == documento.Id);
+        var existente = Documentos.FirstOrDefault(d => d.TipoDocumentoId == documento.Id);
         if (existente is not null)
         {
             if (!documento.AplicaA(TipoVehiculo))
@@ -220,13 +220,13 @@ public sealed class Vehiculo : BaseEntity
     }
 
     /// <summary>Navegación de lectura para materialización de EF; no permite mutar la colección.</summary>
-    public IReadOnlyList<VehiculoDocumento> DocumentosAssociated => Documentos;
+    public IReadOnlyList<DocumentoVehiculo> DocumentosAssociated => Documentos;
 
     /// <summary>Navegación de lectura para materialización de EF; no permite mutar la colección.</summary>
     public IReadOnlyList<ConductorVehiculo> ConductoresAssociated => Conductores;
 
     /// <summary>Vista de solo lectura: la colección sigue siendo privada y no se puede mutar desde afuera.</summary>
-    public IReadOnlyList<VehiculoDocumento> GetDocumentos() => Documentos;
+    public IReadOnlyList<DocumentoVehiculo> GetTiposDocumento() => Documentos;
 
     /// <summary>Vista de solo lectura de los conductores asociados.</summary>
     public IReadOnlyList<ConductorVehiculo> GetConductores() => Conductores;

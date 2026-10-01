@@ -252,7 +252,7 @@ public sealed class AuthApiTests
             modelo = 2020,
             marca = "Toyota",
             linea = "Corolla",
-            documentoId = Guid.Empty,
+            tipoDocumentoId = Guid.Empty,
             documentoBase64 = "",
             nombreArchivo = "",
             fechaExpedicion = DateTime.UtcNow.AddDays(-30),

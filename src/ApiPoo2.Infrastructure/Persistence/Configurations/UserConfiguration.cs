@@ -13,7 +13,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasKey(u => new { u.IdPersona, u.Login });
 
-        builder.Property(u => u.IdPersona).HasColumnName("idpersona");
+        builder.Property(u => u.IdPersona).HasColumnName("id_persona");
         builder.Property(u => u.Login)
             .HasColumnName("login")
             .HasConversion(v => v.Value, v => Login.From(v))
@@ -39,7 +39,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired();
 
         builder.Property(u => u.Role)
-            .HasColumnName("rol")
+            .HasColumnName("role")
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired();

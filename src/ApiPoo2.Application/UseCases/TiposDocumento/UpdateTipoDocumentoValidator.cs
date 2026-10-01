@@ -1,12 +1,12 @@
 using FluentValidation;
 
-namespace ApiPoo2.Application.UseCases.Documentos;
+namespace ApiPoo2.Application.UseCases.TiposDocumento;
 
-public sealed class UpdateDocumentoValidator : AbstractValidator<UpdateDocumentoInputDto>
+public sealed class UpdateTipoDocumentoValidator : AbstractValidator<UpdateTipoDocumentoInputDto>
 {
-    public UpdateDocumentoValidator()
+    public UpdateTipoDocumentoValidator()
     {
-        RuleFor(x => x.DocumentoId).NotEmpty().WithMessage("El documento es obligatorio.");
+        RuleFor(x => x.TipoDocumentoId).NotEmpty().WithMessage("El documento es obligatorio.");
         RuleFor(x => x.Nombre).NotEmpty().WithMessage("El nombre es obligatorio.");
         RuleFor(x => x.TiposVehiculoAplicables).NotEmpty().WithMessage("Los tipos aplicables son obligatorios.");
         RuleFor(x => x.CodigoObligatoriedad).NotEmpty().WithMessage("La obligatoriedad es obligatoria.");

@@ -20,8 +20,8 @@ public sealed class ConductorVehiculoConfiguration : IEntityTypeConfiguration<Co
         builder.Property(c => c.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("timestamptz");
         builder.Property(c => c.UpdatedAtUtc).HasColumnName("updated_at_utc").HasColumnType("timestamptz");
 
-        builder.Property(c => c.PersonaId).HasColumnName("idpersona").IsRequired();
-        builder.Property(c => c.VehiculoId).HasColumnName("idvehiculo").IsRequired();
+        builder.Property(c => c.PersonaId).HasColumnName("id_persona").IsRequired();
+        builder.Property(c => c.VehiculoId).HasColumnName("id_vehiculo").IsRequired();
         builder.Property(c => c.FechaAsociacion).HasColumnName("fecha_asociacion").HasColumnType("timestamptz").IsRequired();
 
         builder.Property(c => c.Estado)

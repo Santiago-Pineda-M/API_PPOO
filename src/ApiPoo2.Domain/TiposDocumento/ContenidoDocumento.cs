@@ -1,7 +1,7 @@
 using System.Text;
 using ApiPoo2.Domain.Common;
 
-namespace ApiPoo2.Domain.Documentos;
+namespace ApiPoo2.Domain.TiposDocumento;
 
 /// <summary>
 ///     Contenido binario del documento. El enunciado pide BLOB y Base64; acá se guardan los bytes

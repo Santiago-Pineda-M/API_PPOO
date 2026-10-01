@@ -1,18 +1,18 @@
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Vehiculos;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Documentos;
+namespace ApiPoo2.Application.UseCases.TiposDocumento;
 
-public sealed record RegisterDocumentoInputDto(
+public sealed record RegisterTipoDocumentoInputDto(
     string Codigo,
     string Nombre,
     string TiposVehiculoAplicables,
     string CodigoObligatoriedad,
     string Descripcion);
 
-public sealed record DocumentoParametricoOutputDto(
+public sealed record TipoDocumentoOutputDto(
     Guid Id,
     string Codigo,
     string Nombre,
@@ -21,16 +21,16 @@ public sealed record DocumentoParametricoOutputDto(
     string Descripcion);
 
 /// <summary>CRUD de la entidad paramétrica de documentos (catálogo de tipos).</summary>
-public sealed class RegisterDocumentoUseCase : BaseUseCase<RegisterDocumentoInputDto, DocumentoParametricoOutputDto>
+public sealed class RegisterTipoDocumentoUseCase : BaseUseCase<RegisterTipoDocumentoInputDto, TipoDocumentoOutputDto>
 {
-    private readonly IDocumentoRepository _documentoRepository;
+    private readonly ITipoDocumentoRepository _documentoRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
-    public RegisterDocumentoUseCase(
-        IEnumerable<IValidator<RegisterDocumentoInputDto>> validators,
+    public RegisterTipoDocumentoUseCase(
+        IEnumerable<IValidator<RegisterTipoDocumentoInputDto>> validators,
         ILoggerFactory loggerFactory,
-        IDocumentoRepository documentoRepository,
+        ITipoDocumentoRepository documentoRepository,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
         : base(validators, loggerFactory)
@@ -40,18 +40,18 @@ public sealed class RegisterDocumentoUseCase : BaseUseCase<RegisterDocumentoInpu
         _unitOfWork = unitOfWork;
     }
 
-    protected override async Task<DocumentoParametricoOutputDto> ExecuteCoreAsync(
-        RegisterDocumentoInputDto request,
+    protected override async Task<TipoDocumentoOutputDto> ExecuteCoreAsync(
+        RegisterTipoDocumentoInputDto request,
         CancellationToken cancellationToken)
     {
-        var codigo = DocumentoCodigo.From(request.Codigo);
+        var codigo = TipoDocumentoCodigo.From(request.Codigo);
 
         if (await _documentoRepository.GetByCodigoAsync(codigo, cancellationToken) is not null)
         {
             throw new ConflictException("document.code.conflict", "Ya existe un documento con ese código.");
         }
 
-        var documento = Documento.Register(
+        var documento = TipoDocumento.Register(
             codigo.Value,
             request.Nombre,
             request.TiposVehiculoAplicables,
@@ -62,7 +62,7 @@ public sealed class RegisterDocumentoUseCase : BaseUseCase<RegisterDocumentoInpu
         _documentoRepository.Add(documento);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new DocumentoParametricoOutputDto(
+        return new TipoDocumentoOutputDto(
             documento.Id,
             documento.Codigo.Value,
             documento.Nombre.Value,

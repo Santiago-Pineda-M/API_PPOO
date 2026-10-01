@@ -1,5 +1,5 @@
 using ApiPoo2.Application.UseCases.Vehiculos.Consultas;
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.Vehiculos;
 using FluentValidation;
@@ -20,11 +20,11 @@ public sealed record VehiculoConsultaOutputDto(
     int Modelo,
     string Marca,
     string Linea,
-    IReadOnlyList<DocumentoVehiculoOutputDto> Documentos,
+    IReadOnlyList<DocumentoVehiculoConsultaOutputDto> Documentos,
     IReadOnlyList<VehiculoConductorOutputDto> Conductores);
 
-public sealed record DocumentoVehiculoOutputDto(
-    Guid DocumentoId,
+public sealed record DocumentoVehiculoConsultaOutputDto(
+    Guid TipoDocumentoId,
     string NombreArchivo,
     string ContentType,
     DateTime FechaExpedicion,

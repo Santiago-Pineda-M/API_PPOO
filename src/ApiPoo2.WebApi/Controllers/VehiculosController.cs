@@ -1,10 +1,10 @@
 using ApiPoo2.Application.UseCases.Auth;
-using ApiPoo2.Application.UseCases.Documentos;
+using ApiPoo2.Application.UseCases.TiposDocumento;
 using ApiPoo2.Application.UseCases.Vehiculos;
 using ApiPoo2.Application.UseCases.Vehiculos.Consultas;
 using ApiPoo2.Application.UseCases.Vehiculos.Delete;
 using ApiPoo2.Application.UseCases.Vehiculos.Update;
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Vehiculos;
 using ApiPoo2.WebApi.Auth;
 using Microsoft.AspNetCore.Authorization;
@@ -22,10 +22,10 @@ public sealed class VehiculosController : ControllerBase
     private readonly UpdateVehiculoUseCase _update;
     private readonly DeleteVehiculoUseCase _delete;
     private readonly GetVehiculosByTipoUseCase _byTipo;
-    private readonly GetVehiculosByDocumentoUseCase _byDocumento;
+    private readonly GetVehiculosByTipoDocumentoUseCase _byDocumento;
     private readonly GetVehiculosByEstadoDocumentoUseCase _byEstado;
-    private readonly ChangeDocumentoEstadoUseCase _cambiarEstadoDocumento;
-    private readonly UploadDocumentosUseCase _upload;
+    private readonly ChangeTipoDocumentoEstadoUseCase _cambiarEstadoDocumento;
+    private readonly UploadDocumentoVehiculoUseCase _upload;
 
     public VehiculosController(
         CreateVehiculoUseCase create,
@@ -34,10 +34,10 @@ public sealed class VehiculosController : ControllerBase
         UpdateVehiculoUseCase update,
         DeleteVehiculoUseCase delete,
         GetVehiculosByTipoUseCase byTipo,
-        GetVehiculosByDocumentoUseCase byDocumento,
+        GetVehiculosByTipoDocumentoUseCase byDocumento,
         GetVehiculosByEstadoDocumentoUseCase byEstado,
-        ChangeDocumentoEstadoUseCase cambiarEstadoDocumento,
-        UploadDocumentosUseCase upload)
+        ChangeTipoDocumentoEstadoUseCase cambiarEstadoDocumento,
+        UploadDocumentoVehiculoUseCase upload)
     {
         _create = create;
         _getByPlaca = getByPlaca;
@@ -74,11 +74,11 @@ public sealed class VehiculosController : ControllerBase
         => Ok(await _byTipo.ExecuteAsync(new GetVehiculosByTipoInputDto(tipoVehiculo), cancellationToken));
 
     [Authorize(Policy = ApiKeyRequirement.PolicyName)]
-    [HttpGet("documento/{codigo}")]
-    public async Task<ActionResult<IReadOnlyList<VehiculoResumenOutputDto>>> GetByDocumento(
+    [HttpGet("tipo-documento/{codigo}")]
+    public async Task<ActionResult<IReadOnlyList<VehiculoResumenOutputDto>>> GetByTipoDocumento(
         [FromRoute] string codigo,
         CancellationToken cancellationToken)
-        => Ok(await _byDocumento.ExecuteAsync(new GetVehiculosByDocumentoInputDto(codigo), cancellationToken));
+        => Ok(await _byDocumento.ExecuteAsync(new GetVehiculosByTipoDocumentoInputDto(codigo), cancellationToken));
 
     [Authorize(Policy = ApiKeyRequirement.PolicyName)]
     [HttpGet("estado-documento/{estado}")]
@@ -126,25 +126,25 @@ public sealed class VehiculosController : ControllerBase
 
     /// <summary>Cambia el estado almacenado de un documento asociado.</summary>
     [Authorize(Policy = ApiKeyRequirement.PolicyName)]
-    [HttpPut("{vehiculoId:guid}/documentos/{documentoId:guid}/estado")]
+    [HttpPut("{vehiculoId:guid}/documentos/{tipoDocumentoId:guid}/estado")]
     public async Task<ActionResult<OperationResult>> CambiarEstadoDocumento(
         [FromRoute] Guid vehiculoId,
-        [FromRoute] Guid documentoId,
-        [FromBody] ChangeDocumentoEstadoBody body,
+        [FromRoute] Guid tipoDocumentoId,
+        [FromBody] ChangeTipoDocumentoEstadoBody body,
         CancellationToken cancellationToken)
         => Ok(await _cambiarEstadoDocumento.ExecuteAsync(
-            new ChangeDocumentoEstadoInputDto(vehiculoId, documentoId, body.Estado),
+            new ChangeTipoDocumentoEstadoInputDto(vehiculoId, tipoDocumentoId, body.Estado),
             cancellationToken));
 
     /// <summary>Cargue y/o actualización de uno o varios documentos en Base64.</summary>
     [Authorize(Policy = ApiKeyRequirement.PolicyName)]
     [HttpPost("{vehiculoId:guid}/documentos")]
-    public async Task<ActionResult<DocumentoUploadOutputDto>> UploadDocumentos(
+    public async Task<ActionResult<DocumentoVehiculoUploadOutputDto>> UploadDocumentoVehiculo(
         [FromRoute] Guid vehiculoId,
-        [FromBody] UploadDocumentosRequest body,
+        [FromBody] UploadDocumentoVehiculoRequest body,
         CancellationToken cancellationToken)
         => Ok(await _upload.ExecuteAsync(
-            new UploadDocumentosInputDto(vehiculoId, body.Documentos),
+            new UploadDocumentoVehiculoInputDto(vehiculoId, body.Documentos),
             cancellationToken));
 }
 
@@ -159,6 +159,6 @@ public sealed record UpdateVehiculoBody(
     string Marca,
     string Linea);
 
-public sealed record ChangeDocumentoEstadoBody(EstadoDocumento Estado);
+public sealed record ChangeTipoDocumentoEstadoBody(EstadoDocumento Estado);
 
-public sealed record UploadDocumentosRequest(IReadOnlyList<DocumentoUploadItem> Documentos);
+public sealed record UploadDocumentoVehiculoRequest(IReadOnlyList<DocumentoVehiculoUploadItem> Documentos);

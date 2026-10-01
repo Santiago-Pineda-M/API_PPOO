@@ -7,13 +7,13 @@ public sealed class RefreshToken : BaseEntity
 {
     public static readonly TimeSpan MaxLifetime = TimeSpan.FromDays(7);
 
-    public Guid UserId { get; private set; }
+    public Guid PersonaId { get; private set; }
 
     /// <summary>
-    ///     Login del dueño. Junto con <see cref="UserId" /> forma la clave foránea hacia
+    ///     Login del dueño. Junto con <see cref="PersonaId" /> forma la clave foránea hacia
     ///     Usuario, cuya primary key es compuesta (idpersona, login).
     /// </summary>
-    public Login UserLogin { get; private set; } = null!;
+    public Login Login { get; private set; } = null!;
 
     public string TokenHash { get; private set; } = null!;
 
@@ -36,13 +36,13 @@ public sealed class RefreshToken : BaseEntity
     }
 
     public static RefreshToken Issue(
-        Guid userId,
-        Login userLogin,
+        Guid personaId,
+        Login login,
         string tokenHash,
         DateTime expiresAtUtc,
         DateTime utcNow)
     {
-        if (userId == Guid.Empty)
+        if (personaId == Guid.Empty)
         {
             throw new DomainValidationException("refresh.invalid", ["El usuario del token de refresco es obligatorio."]);
         }
@@ -64,8 +64,8 @@ public sealed class RefreshToken : BaseEntity
 
         var token = new RefreshToken
         {
-            UserId = userId,
-            UserLogin = userLogin,
+            PersonaId = personaId,
+            Login = login,
             TokenHash = tokenHash,
             ExpiresAtUtc = expiresAtUtc,
         };

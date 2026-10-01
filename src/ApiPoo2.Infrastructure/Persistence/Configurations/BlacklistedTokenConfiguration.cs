@@ -12,8 +12,8 @@ public sealed class BlacklistedTokenConfiguration : IEntityTypeConfiguration<Bla
 
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Id).HasColumnName("id");
-        builder.Property(t => t.Jti).HasColumnName("jti");
-        builder.Property(t => t.PersonaId).HasColumnName("idpersona");
+        builder.Property(t => t.Jti).HasColumnName("jwt_id");
+        builder.Property(t => t.PersonaId).HasColumnName("id_persona");
         builder.Property(t => t.ExpiresAtUtc).HasColumnName("expires_at_utc").HasColumnType("timestamptz");
         builder.Property(t => t.RevokedAtUtc).HasColumnName("revoked_at_utc").HasColumnType("timestamptz");
         builder.Property(t => t.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("timestamptz");

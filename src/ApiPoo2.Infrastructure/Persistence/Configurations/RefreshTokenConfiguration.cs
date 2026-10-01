@@ -14,8 +14,8 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
 
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Id).HasColumnName("id");
-        builder.Property(t => t.UserId).HasColumnName("idpersona");
-        builder.Property(t => t.UserLogin)
+        builder.Property(t => t.PersonaId).HasColumnName("id_persona");
+        builder.Property(t => t.Login)
             .HasColumnName("login")
             .HasConversion(v => v.Value, v => Login.From(v))
             .HasMaxLength(64)
@@ -33,7 +33,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.Property<uint>("xmin").HasColumnName("xmin").IsRowVersion();
 
         builder.HasIndex(t => t.TokenHash).IsUnique();
-        builder.HasIndex(t => new { t.UserId, t.UserLogin });
+        builder.HasIndex(t => new { t.PersonaId, t.Login });
         builder.HasIndex(t => t.ExpiresAtUtc);
 
         // Relación declarada una sola vez, con la navegación real del principal
@@ -41,7 +41,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         // nombre del campo privado duplicaría la relación con una FK fantasma.
         builder.HasOne<User>()
             .WithMany(u => u.RefreshTokensVisibles)
-            .HasForeignKey(t => new { t.UserId, t.UserLogin })
+            .HasForeignKey(t => new { t.PersonaId, t.Login })
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

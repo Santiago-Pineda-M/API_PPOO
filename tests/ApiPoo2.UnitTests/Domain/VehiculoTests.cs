@@ -1,5 +1,5 @@
 using ApiPoo2.Domain.Common;
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.Vehiculos;
 using FluentAssertions;
@@ -27,8 +27,8 @@ public sealed class VehiculoTests
             "Fortuner SW",
             Ahora);
 
-    private static Documento CrearDocumento(string tipos = "AM", string obligatoriedad = "RR")
-        => Documento.Register("SOAT", "SOAT", tipos, obligatoriedad, "Seguro Obligatorio", Ahora);
+    private static TipoDocumento CrearTipoDocumento(string tipos = "AM", string obligatoriedad = "RR")
+        => TipoDocumento.Register("SOAT", "SOAT", tipos, obligatoriedad, "Seguro Obligatorio", Ahora);
 
     [Fact]
     public void Register_NormalizaLaPlaca()
@@ -158,7 +158,7 @@ public sealed class VehiculoTests
     {
         var vehiculo = CrearVehiculo();
         vehiculo.AdjuntarDocumento(
-            CrearDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(-10), Ahora.AddDays(30), Ahora);
+            CrearTipoDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(-10), Ahora.AddDays(30), Ahora);
 
         FluentActions.Invoking(() => vehiculo.Actualizar(
                 "ABC12D",
@@ -179,7 +179,7 @@ public sealed class VehiculoTests
     public void GuardarDocumento_ActualizaArchivoExistente()
     {
         var vehiculo = CrearVehiculo();
-        var documento = CrearDocumento();
+        var documento = CrearTipoDocumento();
         vehiculo.AdjuntarDocumento(documento, PdfValido, "SOAT.pdf", Ahora.AddDays(-10), Ahora.AddDays(30), Ahora);
 
         var actualizado = vehiculo.GuardarDocumento(
@@ -206,7 +206,7 @@ public sealed class VehiculoTests
         var vehiculo = CrearVehiculo();
 
         var relacion = vehiculo.AdjuntarDocumento(
-            CrearDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(-10), Ahora.AddDays(30), Ahora);
+            CrearTipoDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(-10), Ahora.AddDays(30), Ahora);
 
         relacion.Estado.Should().Be(EstadoDocumento.EnVerificacion);
         relacion.FechaExpedicion.Should().Be(Ahora.AddDays(-10));
@@ -217,7 +217,7 @@ public sealed class VehiculoTests
     public void AdjuntarDocumento_RechazaDocumentoDeOtroTipoDeVehiculo()
     {
         var moto = CrearVehiculo("ABC12D", TipoVehiculo.Motocicleta);
-        var soloAutomovil = CrearDocumento(tipos: "A");
+        var soloAutomovil = CrearTipoDocumento(tipos: "A");
 
         FluentActions.Invoking(() => moto.AdjuntarDocumento(
                 soloAutomovil, PdfValido, "SOAT.pdf", Ahora.AddDays(-1), Ahora.AddDays(30), Ahora))
@@ -229,7 +229,7 @@ public sealed class VehiculoTests
     public void AdjuntarDocumento_RechazaDuplicado()
     {
         var vehiculo = CrearVehiculo();
-        var documento = CrearDocumento();
+        var documento = CrearTipoDocumento();
         vehiculo.AdjuntarDocumento(documento, PdfValido, "SOAT.pdf", Ahora.AddDays(-1), Ahora.AddDays(30), Ahora);
 
         FluentActions.Invoking(() => vehiculo.AdjuntarDocumento(
@@ -244,7 +244,7 @@ public sealed class VehiculoTests
         var vehiculo = CrearVehiculo();
 
         FluentActions.Invoking(() => vehiculo.AdjuntarDocumento(
-                CrearDocumento(), PdfValido, "SOAT.pdf", Ahora, Ahora.AddDays(-5), Ahora))
+                CrearTipoDocumento(), PdfValido, "SOAT.pdf", Ahora, Ahora.AddDays(-5), Ahora))
             .Should().Throw<DomainValidationException>()
             .Which.Code.Should().Be("vehiculo_documento.vencimiento");
     }
@@ -255,7 +255,7 @@ public sealed class VehiculoTests
         var vehiculo = CrearVehiculo();
 
         FluentActions.Invoking(() => vehiculo.AdjuntarDocumento(
-                CrearDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(5), Ahora.AddDays(30), Ahora))
+                CrearTipoDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(5), Ahora.AddDays(30), Ahora))
             .Should().Throw<DomainValidationException>()
             .Which.Code.Should().Be("vehiculo_documento.expedicion");
     }
@@ -264,7 +264,7 @@ public sealed class VehiculoTests
     public void EstadoActual_DerivaVencidoPorFecha()
     {
         var relacion = CrearVehiculo().AdjuntarDocumento(
-            CrearDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(-10), Ahora.AddDays(30), Ahora);
+            CrearTipoDocumento(), PdfValido, "SOAT.pdf", Ahora.AddDays(-10), Ahora.AddDays(30), Ahora);
 
         relacion.EstadoActual(Ahora).Should().Be(EstadoDocumento.EnVerificacion);
         relacion.EstadoActual(Ahora.AddDays(31)).Should().Be(EstadoDocumento.Vencido);
@@ -288,7 +288,7 @@ public sealed class VehiculoTests
     }
 }
 
-public sealed class DocumentoParametricoTests
+public sealed class TipoDocumentoParametricoTests
 {
     private static readonly DateTime Ahora = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
@@ -326,7 +326,7 @@ public sealed class DocumentoParametricoTests
     [Fact]
     public void AplicaA_SoloAlTipoIndicado()
     {
-        var soloAuto = Documento.Register("SOAT", "SOAT", "A", "RA", "desc", Ahora);
+        var soloAuto = TipoDocumento.Register("SOAT", "SOAT", "A", "RA", "desc", Ahora);
 
         soloAuto.AplicaA(TipoVehiculo.Automovil).Should().BeTrue();
         soloAuto.AplicaA(TipoVehiculo.Motocicleta).Should().BeFalse();
@@ -335,7 +335,7 @@ public sealed class DocumentoParametricoTests
     [Fact]
     public void AplicaA_AMBetaParaAmbos()
     {
-        var ambos = Documento.Register("RT", "Registro", "AM", "RR", "desc", Ahora);
+        var ambos = TipoDocumento.Register("RT", "Registro", "AM", "RR", "desc", Ahora);
 
         ambos.AplicaA(TipoVehiculo.Automovil).Should().BeTrue();
         ambos.AplicaA(TipoVehiculo.Motocicleta).Should().BeTrue();
@@ -344,7 +344,7 @@ public sealed class DocumentoParametricoTests
     [Fact]
     public void EsObligatorioPara_RaSoloAutomovil()
     {
-        var doc = Documento.Register("SOAT", "SOAT", "A", "RA", "desc", Ahora);
+        var doc = TipoDocumento.Register("SOAT", "SOAT", "A", "RA", "desc", Ahora);
 
         doc.EsObligatorioPara(TipoVehiculo.Automovil).Should().BeTrue();
         doc.EsObligatorioPara(TipoVehiculo.Motocicleta).Should().BeFalse();
@@ -353,7 +353,7 @@ public sealed class DocumentoParametricoTests
     [Fact]
     public void EsObligatorioPara_RmSoloMotocicleta()
     {
-        var doc = Documento.Register("TM", "Tecnomecanica", "M", "RM", "desc", Ahora);
+        var doc = TipoDocumento.Register("TM", "Tecnomecanica", "M", "RM", "desc", Ahora);
 
         doc.EsObligatorioPara(TipoVehiculo.Motocicleta).Should().BeTrue();
         doc.EsObligatorioPara(TipoVehiculo.Automovil).Should().BeFalse();
@@ -362,7 +362,7 @@ public sealed class DocumentoParametricoTests
     [Fact]
     public void ActualizarDocumentoParametrico_CambiaDatosSinCambiarCodigo()
     {
-        var documento = Documento.Register("SOAT", "SOAT", "A", "RA", "desc", Ahora);
+        var documento = TipoDocumento.Register("SOAT", "SOAT", "A", "RA", "desc", Ahora);
 
         documento.Actualizar("Seguro obligatorio", "AM", "RR", "Cobertura amplia", Ahora);
 
@@ -375,7 +375,7 @@ public sealed class DocumentoParametricoTests
 
     [Fact]
     public void Descripcion_EsObligatoria()
-        => FluentActions.Invoking(() => Documento.Register("SOAT", "SOAT", "A", "RA", "  ", Ahora))
+        => FluentActions.Invoking(() => TipoDocumento.Register("SOAT", "SOAT", "A", "RA", "  ", Ahora))
             .Should().Throw<DomainValidationException>()
             .Which.Code.Should().Be("documento.descripcion");
 }

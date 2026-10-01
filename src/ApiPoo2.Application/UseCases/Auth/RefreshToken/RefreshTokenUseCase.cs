@@ -41,7 +41,7 @@ public sealed class RefreshTokenUseCase : BaseUseCase<RefreshTokenInputDto, Refr
             throw new UnauthorizedException("refresh.invalid", "Token de refresco inválido.");
         }
 
-        var persona = await _userRepository.GetPersonaByIdAsync(storedToken.UserId, cancellationToken)
+        var persona = await _userRepository.GetPersonaByIdAsync(storedToken.PersonaId, cancellationToken)
             ?? throw new UnauthorizedException("refresh.invalid", "Token de refresco inválido.");
 
         var user = persona.Usuario

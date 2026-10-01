@@ -1,7 +1,7 @@
 using ApiPoo2.Application.UseCases.Auth;
 using ApiPoo2.Application.UseCases.Conductores;
 using ApiPoo2.Application.UseCases.Consultas;
-using ApiPoo2.Application.UseCases.Documentos;
+using ApiPoo2.Application.UseCases.TiposDocumento;
 using ApiPoo2.Application.UseCases.Personas;
 using ApiPoo2.Application.UseCases.Personas.Create;
 using ApiPoo2.Application.UseCases.Personas.Get;
@@ -45,17 +45,17 @@ public static class DependencyInjection
         services.AddScoped<UpdateVehiculoUseCase>();
         services.AddScoped<DeleteVehiculoUseCase>();
         services.AddScoped<GetVehiculosByTipoUseCase>();
-        services.AddScoped<GetVehiculosByDocumentoUseCase>();
+        services.AddScoped<GetVehiculosByTipoDocumentoUseCase>();
         services.AddScoped<GetVehiculosByEstadoDocumentoUseCase>();
 
         // Documentos
-        services.AddScoped<RegisterDocumentoUseCase>();
-        services.AddScoped<GetDocumentoUseCase>();
-        services.AddScoped<GetDocumentosUseCase>();
-        services.AddScoped<UpdateDocumentoUseCase>();
-        services.AddScoped<DeleteDocumentoUseCase>();
-        services.AddScoped<ChangeDocumentoEstadoUseCase>();
-        services.AddScoped<UploadDocumentosUseCase>();
+        services.AddScoped<RegisterTipoDocumentoUseCase>();
+        services.AddScoped<GetTipoDocumentoUseCase>();
+        services.AddScoped<GetTiposDocumentoUseCase>();
+        services.AddScoped<UpdateTipoDocumentoUseCase>();
+        services.AddScoped<DeleteTipoDocumentoUseCase>();
+        services.AddScoped<ChangeTipoDocumentoEstadoUseCase>();
+        services.AddScoped<UploadDocumentoVehiculoUseCase>();
 
         // Conductores
         services.AddScoped<AssociateVehiculosUseCase>();
@@ -76,7 +76,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<ChangeUserPasswordInputDto>, ChangeUserPasswordValidator>();
         services.AddScoped<IValidator<CreateVehiculoInputDto>, CreateVehiculoValidator>();
         services.AddScoped<IValidator<UpdateVehiculoInputDto>, UpdateVehiculoValidator>();
-        services.AddScoped<IValidator<UpdateDocumentoInputDto>, UpdateDocumentoValidator>();
+        services.AddScoped<IValidator<UpdateTipoDocumentoInputDto>, UpdateTipoDocumentoValidator>();
 
         return services;
     }

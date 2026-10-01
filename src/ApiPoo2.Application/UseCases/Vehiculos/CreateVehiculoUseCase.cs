@@ -1,4 +1,4 @@
-using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.TiposDocumento;
 using ApiPoo2.Domain.Vehiculos;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
@@ -19,7 +19,7 @@ public sealed record CreateVehiculoInputDto(
     int Modelo,
     string Marca,
     string Linea,
-    Guid DocumentoId,
+    Guid TipoDocumentoId,
     string DocumentoBase64,
     string NombreArchivo,
     DateTime FechaExpedicion,
@@ -36,7 +36,7 @@ public sealed record CreateVehiculoOutputDto(
     int Modelo,
     string Marca,
     string Linea,
-    Guid DocumentoId,
+    Guid TipoDocumentoId,
     string NombreArchivo,
     DateTime FechaExpedicion,
     DateTime FechaVencimiento,
@@ -45,7 +45,7 @@ public sealed record CreateVehiculoOutputDto(
 public sealed class CreateVehiculoUseCase : BaseUseCase<CreateVehiculoInputDto, CreateVehiculoOutputDto>
 {
     private readonly IVehiculoRepository _vehiculoRepository;
-    private readonly IDocumentoRepository _documentoRepository;
+    private readonly ITipoDocumentoRepository _documentoRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -53,7 +53,7 @@ public sealed class CreateVehiculoUseCase : BaseUseCase<CreateVehiculoInputDto, 
         IEnumerable<IValidator<CreateVehiculoInputDto>> validators,
         ILoggerFactory loggerFactory,
         IVehiculoRepository vehiculoRepository,
-        IDocumentoRepository documentoRepository,
+        ITipoDocumentoRepository documentoRepository,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
         : base(validators, loggerFactory)
@@ -76,7 +76,7 @@ public sealed class CreateVehiculoUseCase : BaseUseCase<CreateVehiculoInputDto, 
             throw new ConflictException("vehiculo.placa.conflict", "Ya existe un vehículo con esa placa.");
         }
 
-        var documento = await _documentoRepository.GetByIdAsync(request.DocumentoId, cancellationToken)
+        var documento = await _documentoRepository.GetByIdAsync(request.TipoDocumentoId, cancellationToken)
             ?? throw new NotFoundException("document.not_found", "El tipo de documento no existe.");
 
         var contenido = ContenidoDocumento.FromBase64(request.DocumentoBase64, request.NombreArchivo);
@@ -116,7 +116,7 @@ public sealed class CreateVehiculoUseCase : BaseUseCase<CreateVehiculoInputDto, 
             vehiculo.Modelo,
             vehiculo.Marca.Value,
             vehiculo.Linea.Value,
-            relacion.DocumentoId,
+            relacion.TipoDocumentoId,
             relacion.NombreArchivo.Value,
             relacion.FechaExpedicion,
             relacion.FechaVencimiento,
