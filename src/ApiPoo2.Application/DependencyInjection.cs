@@ -1,4 +1,5 @@
 using ApiPoo2.Application.UseCases.Auth;
+using ApiPoo2.Application.UseCases.Bootstrap;
 using ApiPoo2.Application.UseCases.Conductores;
 using ApiPoo2.Application.UseCases.Consultas;
 using ApiPoo2.Application.UseCases.TiposDocumento;
@@ -33,6 +34,9 @@ public static class DependencyInjection
         services.AddScoped<CreatePersonaUseCase>();
         services.AddScoped<GetPersonaUseCase>();
         services.AddScoped<UpdatePersonaUseCase>();
+
+        // Bootstrap del primer administrador (solo con base vacía).
+        services.AddScoped<BootstrapAdminUseCase>();
 
         // Usuarios
         services.AddScoped<ChangeUserPasswordUseCase>();
@@ -72,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<IValidator<RefreshTokenInputDto>, RefreshTokenValidator>();
         services.AddScoped<IValidator<ChangePasswordInputDto>, ChangePasswordValidator>();
         services.AddScoped<IValidator<CreatePersonaInputDto>, CreatePersonaValidator>();
+        services.AddScoped<IValidator<BootstrapAdminInputDto>, BootstrapAdminValidator>();
         services.AddScoped<IValidator<UpdatePersonaInputDto>, UpdatePersonaValidator>();
         services.AddScoped<IValidator<ChangeUserPasswordInputDto>, ChangeUserPasswordValidator>();
         services.AddScoped<IValidator<CreateVehiculoInputDto>, CreateVehiculoValidator>();

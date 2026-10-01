@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ApiPoo2.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261001052257_RemoveShadowForeignKeys")]
-    partial class RemoveShadowForeignKeys
+    [Migration("20261001071859_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -42,11 +42,11 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("Jti")
                         .HasColumnType("uuid")
-                        .HasColumnName("jti");
+                        .HasColumnName("jwt_id");
 
                     b.Property<Guid>("PersonaId")
                         .HasColumnType("uuid")
-                        .HasColumnName("idpersona");
+                        .HasColumnName("id_persona");
 
                     b.Property<DateTime>("RevokedAtUtc")
                         .HasColumnType("timestamptz")
@@ -64,119 +64,6 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("access_token_blacklist", (string)null);
-                });
-
-            modelBuilder.Entity("ApiPoo2.Domain.Documentos.Documento", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Codigo")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("codigo");
-
-                    b.Property<string>("CodigoObligatoriedad")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("character varying(2)")
-                        .HasColumnName("codigo_obligatoriedad");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("created_at_utc");
-
-                    b.Property<string>("Descripcion")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("descripcion");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("nombre");
-
-                    b.Property<string>("TiposVehiculoAplicables")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("character varying(2)")
-                        .HasColumnName("tipos_vehiculo_aplicables");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("updated_at_utc");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Codigo")
-                        .IsUnique();
-
-                    b.ToTable("documentos", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_documentos_codigo_obligatoriedad", "codigo_obligatoriedad IN ('RA','RM','RR')");
-
-                            t.HasCheckConstraint("ck_documentos_tipos_vehiculo_aplicables", "tipos_vehiculo_aplicables IN ('A','M','AM')");
-                        });
-                });
-
-            modelBuilder.Entity("ApiPoo2.Domain.Documentos.VehiculoDocumento", b =>
-                {
-                    b.Property<Guid>("VehiculoId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("idvehiculo");
-
-                    b.Property<Guid>("DocumentoId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("iddocumento");
-
-                    b.Property<byte[]>("Contenido")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("contenido");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("created_at_utc");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("estado");
-
-                    b.Property<DateTime>("FechaExpedicion")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("fecha_expedicion");
-
-                    b.Property<DateTime>("FechaVencimiento")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("fecha_vencimiento");
-
-                    b.Property<string>("NombreArchivo")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("nombre_archivo");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("timestamptz")
-                        .HasColumnName("updated_at_utc");
-
-                    b.HasKey("VehiculoId", "DocumentoId");
-
-                    b.HasIndex("DocumentoId");
-
-                    b.ToTable("vehiculos_documentos", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_vehiculos_documentos_contenido", "octet_length(contenido) > 0");
-
-                            t.HasCheckConstraint("ck_vehiculos_documentos_estado", "estado IN ('HABILITADO','VENCIDO','EN_VERIFICACION')");
-                        });
                 });
 
             modelBuilder.Entity("ApiPoo2.Domain.Personas.ConductorVehiculo", b =>
@@ -202,7 +89,7 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("PersonaId")
                         .HasColumnType("uuid")
-                        .HasColumnName("idpersona");
+                        .HasColumnName("id_persona");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamptz")
@@ -210,7 +97,7 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("VehiculoId")
                         .HasColumnType("uuid")
-                        .HasColumnName("idvehiculo");
+                        .HasColumnName("id_vehiculo");
 
                     b.HasKey("Id");
 
@@ -321,6 +208,16 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_used");
 
+                    b.Property<string>("Login")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("login");
+
+                    b.Property<Guid>("PersonaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_persona");
+
                     b.Property<Guid?>("ReplacedByTokenId")
                         .HasColumnType("uuid")
                         .HasColumnName("replaced_by_token_id");
@@ -348,16 +245,6 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamptz")
                         .HasColumnName("used_at_utc");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("idpersona");
-
-                    b.Property<string>("UserLogin")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("login");
-
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -371,16 +258,129 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
-                    b.HasIndex("UserId", "UserLogin");
+                    b.HasIndex("PersonaId", "Login");
 
                     b.ToTable("refresh_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.TiposDocumento.DocumentoVehiculo", b =>
+                {
+                    b.Property<Guid>("VehiculoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_vehiculo");
+
+                    b.Property<Guid>("TipoDocumentoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_tipo_documento");
+
+                    b.Property<byte[]>("Contenido")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("contenido");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("FechaExpedicion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_expedicion");
+
+                    b.Property<DateTime>("FechaVencimiento")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_vencimiento");
+
+                    b.Property<string>("NombreArchivo")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("nombre_archivo");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("VehiculoId", "TipoDocumentoId");
+
+                    b.HasIndex("TipoDocumentoId");
+
+                    b.ToTable("documentos_vehiculo", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_documentos_vehiculo_contenido", "octet_length(contenido) > 0");
+
+                            t.HasCheckConstraint("ck_documentos_vehiculo_estado", "estado IN ('HABILITADO','VENCIDO','EN_VERIFICACION')");
+                        });
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.TiposDocumento.TipoDocumento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("codigo");
+
+                    b.Property<string>("CodigoObligatoriedad")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("codigo_obligatoriedad");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("nombre");
+
+                    b.Property<string>("TiposVehiculoAplicables")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("tipos_vehiculo_aplicables");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("tipos_documento", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_tipos_documento_codigo_obligatoriedad", "codigo_obligatoriedad IN ('RA','RM','RR')");
+
+                            t.HasCheckConstraint("ck_tipos_documento_tipos_vehiculo_aplicables", "tipos_vehiculo_aplicables IN ('A','M','AM')");
+                        });
                 });
 
             modelBuilder.Entity("ApiPoo2.Domain.Users.User", b =>
                 {
                     b.Property<Guid>("IdPersona")
                         .HasColumnType("uuid")
-                        .HasColumnName("idpersona");
+                        .HasColumnName("id_persona");
 
                     b.Property<string>("Login")
                         .HasMaxLength(64)
@@ -429,7 +429,7 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
-                        .HasColumnName("rol");
+                        .HasColumnName("role");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamptz")
@@ -540,21 +540,6 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("ApiPoo2.Domain.Documentos.VehiculoDocumento", b =>
-                {
-                    b.HasOne("ApiPoo2.Domain.Documentos.Documento", null)
-                        .WithMany()
-                        .HasForeignKey("DocumentoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("ApiPoo2.Domain.Vehiculos.Vehiculo", null)
-                        .WithMany("DocumentosAssociated")
-                        .HasForeignKey("VehiculoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("ApiPoo2.Domain.Personas.ConductorVehiculo", b =>
                 {
                     b.HasOne("ApiPoo2.Domain.Personas.Persona", "Persona")
@@ -576,7 +561,22 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                 {
                     b.HasOne("ApiPoo2.Domain.Users.User", null)
                         .WithMany("RefreshTokensVisibles")
-                        .HasForeignKey("UserId", "UserLogin")
+                        .HasForeignKey("PersonaId", "Login")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.TiposDocumento.DocumentoVehiculo", b =>
+                {
+                    b.HasOne("ApiPoo2.Domain.TiposDocumento.TipoDocumento", null)
+                        .WithMany()
+                        .HasForeignKey("TipoDocumentoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApiPoo2.Domain.Vehiculos.Vehiculo", null)
+                        .WithMany("DocumentosAssociated")
+                        .HasForeignKey("VehiculoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

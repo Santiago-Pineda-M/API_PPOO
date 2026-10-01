@@ -337,6 +337,26 @@ Criterios de entrega:
 
 ---
 
+## F-E2-USR-05 — Arranque del primer administrador (bootstrap)
+
+Contrato:
+
+- `POST /api/bootstrap/admin` (público, sin token)
+
+Reglas:
+
+- Lee los datos desde la configuración (`Bootstrap__TipoIdentificacion`, `Bootstrap__NumeroIdentificacion`, `Bootstrap__Nombres`, `Bootstrap__Apellidos`, `Bootstrap__CorreoElectronico`).
+- Crea siempre una persona `Administrativo` con su usuario (login mnemotécnico, contraseña y APIKey autogeneradas).
+- **Solo funciona con la base vacía**: si ya existe una persona, responde `403 bootstrap.disabled`.
+
+Criterios de entrega:
+
+- Con base vacía responde `201` con `login`, `passwordGenerada` y `apiKey` para iniciar sesión.
+- Con sistema inicializado responde `403` sin crear nada.
+- La contraseña temporal solo se devuelve en esa respuesta; nunca se almacena en claro.
+
+---
+
 # E2 — Relaciones
 
 ## F-E2-REL-01 — Asociar conductor a vehículos

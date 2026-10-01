@@ -146,6 +146,21 @@ public sealed class AuthApiTests
     }
 
     [Fact]
+    public async Task Bootstrap_ConSistemaInicializado_Forbidden()
+    {
+        // La semilla de pruebas ya inicializó el sistema, así que el bootstrap queda cerrado.
+        _client.DefaultRequestHeaders.Authorization = null;
+        _client.DefaultRequestHeaders.Remove(ApiKeyRequirement.HeaderName);
+
+        var response = await _client.PostAsync("/api/bootstrap/admin", new StringContent(string.Empty));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var body = await ReadAs<ErrorResponse>(response);
+        body.Code.Should().Be("bootstrap.disabled");
+    }
+
+    [Fact]
     public async Task ConsultaPublica_NoRequiereTokenNiApiKey()
     {
         _client.DefaultRequestHeaders.Authorization = null;
