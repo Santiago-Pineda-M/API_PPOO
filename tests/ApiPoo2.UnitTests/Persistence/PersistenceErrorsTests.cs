@@ -1,5 +1,5 @@
 using ApiPoo2.Application.Exceptions;
-using ApiPoo2.Infrastructure.Persistencia.Exceptions;
+using ApiPoo2.Infrastructure.Persistence.Exceptions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -17,44 +17,55 @@ public sealed class PersistenceErrorsTests
     }
 
     [Fact]
-    public void MapUniqueViolation_Should_MapUserEmailConstraint_ToEmailConflict()
+    public void MapUniqueViolation_Should_MapPersonaIdentificacion_ToConflict()
     {
-        var error = PersistenceErrors.MapUniqueViolation("IX_users_email");
+        var error = PersistenceErrors.MapUniqueViolation("personas_numero_identificacion");
 
         error.Should().NotBeNull();
-        error!.Code.Should().Be("email.conflict");
+        error!.Code.Should().Be("persona.identificacion.conflict");
         error.Should().BeAssignableTo<ConflictException>();
     }
 
     [Fact]
+    public void MapUniqueViolation_Should_MapVehiculoPlaca_ToConflict()
+    {
+        var error = PersistenceErrors.MapUniqueViolation("vehiculos_placa");
+
+        error!.Code.Should().Be("vehiculo.placa.conflict");
+    }
+
+    [Fact]
     public void MapUniqueViolation_Should_ReturnNull_ForOtherConstraints()
+        => PersistenceErrors.MapUniqueViolation("otra_restriccion").Should().BeNull();
+
+    [Fact]
+    public void Map_Should_WalkInnerExceptions_ToFindConstraint()
     {
-        PersistenceErrors.MapUniqueViolation("IX_refresh_tokens_token_hash").Should().BeNull();
+        var postgres = CrearPostgresUniqueViolation("personas_numero_identificacion");
+
+        var dbUpdate = new DbUpdateException("fallo", new InvalidOperationException("wrap", postgres));
+
+        PersistenceErrors.Map(dbUpdate).Should().BeOfType<ConflictException>()
+            .Which.Code.Should().Be("persona.identificacion.conflict");
     }
 
     [Fact]
-    public void Map_Should_MapEmailUniqueViolation_FromNestedPostgresException()
+    public void Map_Should_ReturnOriginal_WhenNoConstraintMatches()
     {
-        var postgres = new PostgresException(
-            "duplicate key value violates unique constraint \"IX_users_email\"",
-            "ERROR", "ERROR", "23505", "detail", "hint", 0, 0, "query", "where",
-            "schema", "users", "email", "text", "IX_users_email", "file", "1", "routine");
+        var dbUpdate = new DbUpdateException("fallo generico");
 
-        var exception = new DbUpdateException("An error occurred while saving the entity changes.", postgres);
-
-        var mapped = PersistenceErrors.Map(exception);
-
-        mapped.Should().BeOfType<ConflictException>();
-        mapped.As<ConflictException>().Code.Should().Be("email.conflict");
+        PersistenceErrors.Map(dbUpdate).Should().BeSameAs(dbUpdate);
     }
 
-    [Fact]
-    public void Map_Should_ReturnOriginal_WhenConstraintIsNotMapped()
-    {
-        var exception = new DbUpdateException("boom");
-
-        var mapped = PersistenceErrors.Map(exception);
-
-        mapped.Should().BeSameAs(exception);
-    }
+    /// <summary>
+    ///     PostgresException no expone ConstraintName con setter, así que se construye con el
+    ///     constructor deNpgsql que sí lo recibe.
+    /// </summary>
+    private static PostgresException CrearPostgresUniqueViolation(string constraintName)
+        => new(
+            "duplicate key value violates unique constraint",
+            "ERROR",
+            "ERROR",
+            "23505",
+            constraintName: constraintName);
 }

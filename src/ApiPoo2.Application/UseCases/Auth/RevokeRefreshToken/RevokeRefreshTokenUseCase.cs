@@ -1,12 +1,9 @@
-using ApiPoo2.Application.Exceptions;
-using ApiPoo2.Application.IRepositories;
-using ApiPoo2.Application.IServices;
-using ApiPoo2.Application.DTOs;
-using ApiPoo2.Domain.Enums;
+using ApiPoo2.Application.UseCases.Auth;
+using ApiPoo2.Domain.RefreshTokens;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Auth.RevokeRefreshToken;
+namespace ApiPoo2.Application.UseCases.Auth;
 
 public sealed class RevokeRefreshTokenUseCase : BaseUseCase<RevokeRefreshTokenInputDto, OperationResult>
 {
@@ -32,18 +29,15 @@ public sealed class RevokeRefreshTokenUseCase : BaseUseCase<RevokeRefreshTokenIn
 
     protected override async Task<OperationResult> ExecuteCoreAsync(RevokeRefreshTokenInputDto request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdWithRefreshTokensAsync(request.UserId, cancellationToken)
-            ?? throw new NotFoundException("user.not_found", "El usuario no existe.");
+        var persona = await _userRepository.GetPersonaByIdAsync(request.PersonaId, cancellationToken)
+            ?? throw new NotFoundException("person.not_found", "La persona no existe.");
+
+        var user = persona.Usuario
+            ?? throw new NotFoundException("user.not_found", "La persona no tiene un usuario asociado.");
 
         var hash = _jwtTokenService.HashRefreshToken(request.RefreshToken);
-        var token = user.RefreshTokens.FirstOrDefault(t => t.TokenHash == hash);
+        user.FindRefreshToken(hash)?.Revoke(RevocationReason.ExplicitRevocation, _dateTimeProvider.UtcNow);
 
-        if (token is null || token.IsRevoked)
-        {
-            return OperationResult.Success();
-        }
-
-        user.RevokeRefreshToken(token.Id, RevocationReason.ExplicitRevocation, _dateTimeProvider.UtcNow);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return OperationResult.Success();

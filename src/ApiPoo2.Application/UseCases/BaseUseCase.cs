@@ -1,11 +1,10 @@
 using System.Diagnostics;
-using ApiPoo2.Application.Exceptions;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
 namespace ApiPoo2.Application.UseCases;
 
-public abstract class BaseUseCase<TRequest, TResult>
+public abstract class BaseUseCase<TRequest, TResult> : IUseCase<TRequest, TResult>
     where TRequest : class
 {
     private readonly IEnumerable<IValidator<TRequest>> _validators;
@@ -14,13 +13,13 @@ public abstract class BaseUseCase<TRequest, TResult>
     protected BaseUseCase(IEnumerable<IValidator<TRequest>> validators, ILoggerFactory loggerFactory)
     {
         _validators = validators;
-        _logger = loggerFactory.CreateLogger(typeof(TRequest));
+        _logger = loggerFactory.CreateLogger(GetType());
     }
 
     public async Task<TResult> ExecuteAsync(TRequest request, CancellationToken cancellationToken = default)
     {
-        var requestName = typeof(TRequest).Name;
-        _logger.LogInformation("Iniciando {RequestName}", requestName);
+        var useCaseName = GetType().Name;
+        _logger.LogInformation("Iniciando {UseCase}", useCaseName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -30,13 +29,13 @@ public abstract class BaseUseCase<TRequest, TResult>
             var result = await ExecuteCoreAsync(request, cancellationToken);
 
             stopwatch.Stop();
-            _logger.LogInformation("Finalizado {RequestName} en {ElapsedMs} ms", requestName, stopwatch.ElapsedMilliseconds);
+            _logger.LogInformation("Finalizado {UseCase} en {ElapsedMs} ms", useCaseName, stopwatch.ElapsedMilliseconds);
             return result;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Falló {RequestName} en {ElapsedMs} ms", requestName, stopwatch.ElapsedMilliseconds);
+            _logger.LogError(ex, "Falló {UseCase} en {ElapsedMs} ms", useCaseName, stopwatch.ElapsedMilliseconds);
             throw;
         }
     }

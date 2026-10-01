@@ -1,5 +1,5 @@
-using ApiPoo2.Application.DTOs;
-using ApiPoo2.Application.UseCases.Auth.GetCurrentUser;
+using ApiPoo2.Domain.Users;
+using ApiPoo2.Application.UseCases.Auth;
 using ApiPoo2.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +19,6 @@ public sealed class UsersController : ControllerBase
     }
 
     [HttpGet("me")]
-    public async Task<ActionResult<CurrentUserDto>> GetCurrentUser(CancellationToken cancellationToken)
+    public async Task<ActionResult<CurrentUserOutputDto>> GetCurrentUser(CancellationToken cancellationToken)
         => Ok(await _getCurrentUser.ExecuteAsync(new GetCurrentUserInputDto(User.GetUserId()), cancellationToken));
 }

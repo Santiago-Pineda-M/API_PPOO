@@ -1,4 +1,4 @@
-using ApiPoo2.Domain.Entities;
+using ApiPoo2.Domain.RefreshTokens;
 
 namespace ApiPoo2.Application.IRepositories;
 

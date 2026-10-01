@@ -1,144 +1,171 @@
-using ApiPoo2.Domain.Entities;
-using ApiPoo2.Domain.Enums;
-using ApiPoo2.Domain.Events;
+using ApiPoo2.Domain.Common;
+using ApiPoo2.Domain.Personas;
+using ApiPoo2.Domain.RefreshTokens;
+using ApiPoo2.Domain.Users;
 using FluentAssertions;
 
 namespace ApiPoo2.UnitTests.Domain;
 
 public sealed class UserTests
 {
-    private static readonly DateTime Now = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Ahora = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+    private static User CrearUsuario(string passwordHash = "hash-valido", UserRole role = UserRole.Administrator)
+        => User.Crear(
+            Guid.NewGuid(),
+            Login.From("jp123"),
+            passwordHash,
+            role,
+            Ahora);
 
     [Fact]
-    public void Register_Should_CreateUserAndRaiseEvent()
+    public void Crear_AsignaIdPersonaYLoginYGeneraApiKey()
     {
-        var user = User.Register("John@Example.com", "hash", UserRole.Member, Now);
+        var personaId = Guid.NewGuid();
 
-        user.Id.Should().NotBeEmpty();
-        user.Email.Value.Should().Be("john@example.com");
-        user.Role.Should().Be(UserRole.Member);
+        var user = User.Crear(personaId, Login.From("jp123"), "hash", UserRole.Administrator, Ahora);
+
+        user.IdPersona.Should().Be(personaId);
+        user.Login.Value.Should().Be("jp123");
+        user.ApiKey.Value.Should().NotBeNullOrWhiteSpace();
         user.IsActive.Should().BeTrue();
-        user.CreatedAtUtc.Should().Be(Now);
-        user.DomainEvents.Should().ContainSingle(e => e is UserRegisteredEvent);
     }
 
     [Fact]
-    public void ChangePassword_Should_UpdateHashAndRaiseEvent()
+    public void Crear_RechazaPersonaVacia()
     {
-        var user = RegisterFixture();
-        user.IsLockedOut(Now).Should().BeFalse();
-
-        user.ChangePassword("newHash", Now);
-
-        user.PasswordHash.Hash.Should().Be("newHash");
-        user.UpdatedAtUtc.Should().Be(Now);
-        user.DomainEvents.Should().ContainSingle(e => e is PasswordChangedEvent);
+        FluentActions.Invoking(() => User.Crear(Guid.Empty, Login.From("jp123"), "hash", UserRole.Administrator, Ahora))
+            .Should().Throw<DomainValidationException>()
+            .Which.Code.Should().Be("user.persona");
     }
 
     [Fact]
-    public void RecordLoginAttempt_Should_ResetCounterOnSuccess()
+    public void Crear_RechazaHashVacio()
+        => FluentActions.Invoking(() => User.Crear(Guid.NewGuid(), Login.From("jp123"), "  ", UserRole.Administrator, Ahora))
+            .Should().Throw<DomainValidationException>();
+
+    [Fact]
+    public void Crear_IniciaSinRefreshTokens()
+        => CrearUsuario().CountActiveSessions(Ahora).Should().Be(0);
+
+    [Fact]
+    public void IssueRefreshToken_RegistraElToken()
     {
-        var user = RegisterFixture();
+        var user = CrearUsuario();
 
-        user.RecordLoginAttempt(false, Now);
-        user.RecordLoginAttempt(false, Now);
-        user.AccessFailedCount.Should().Be(2);
+        user.IssueRefreshToken("hash-1", Ahora.AddDays(7), Ahora);
 
-        user.RecordLoginAttempt(true, Now);
+        user.CountActiveSessions(Ahora).Should().Be(1);
+    }
+
+    [Fact]
+    public void IssueRefreshToken_LimitaASesionesActivas()
+    {
+        var user = CrearUsuario();
+
+        for (var i = 0; i < User.MaxActiveRefreshTokens; i++)
+        {
+            // Todas dentro de la vida máxima: lo que se agota es el límite de sesiones, no el TTL.
+            user.IssueRefreshToken($"hash-{i}", Ahora.AddDays(1).AddMinutes(i), Ahora);
+        }
+
+        user.IssueRefreshToken("hash-extra", Ahora.AddDays(1).AddMinutes(50), Ahora);
+
+        user.CountActiveSessions(Ahora).Should().Be(User.MaxActiveRefreshTokens);
+    }
+
+    [Fact]
+    public void FindRefreshToken_EncuentraPorHash()
+    {
+        var user = CrearUsuario();
+        user.IssueRefreshToken("hash-abc", Ahora.AddDays(7), Ahora);
+
+        user.FindRefreshToken("hash-abc").Should().NotBeNull();
+        user.FindRefreshToken("otro").Should().BeNull();
+    }
+
+    [Fact]
+    public void RevokeAllRefreshTokens_RevocaTodos()
+    {
+        var user = CrearUsuario();
+        user.IssueRefreshToken("hash-1", Ahora.AddDays(7), Ahora);
+        user.IssueRefreshToken("hash-2", Ahora.AddDays(7), Ahora);
+
+        user.RevokeAllRefreshTokens(RevocationReason.SecurityBreach, Ahora);
+
+        user.CountActiveSessions(Ahora).Should().Be(0);
+    }
+
+    [Fact]
+    public void EvaluateAuthentication_InactivoCuandoEstaDesactivado()
+    {
+        var user = CrearUsuario();
+        user.Deactivate(Ahora);
+
+        user.EvaluateAuthentication(Ahora).Should().Be(AuthenticationBlock.Inactive);
+    }
+
+    [Fact]
+    public void EvaluateAuthentication_BloqueadoTrasCincoFallos()
+    {
+        var user = CrearUsuario();
+
+        for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
+        {
+            user.RecordLoginAttempt(false, Ahora);
+        }
+
+        user.EvaluateAuthentication(Ahora).Should().Be(AuthenticationBlock.LockedOut);
+    }
+
+    [Fact]
+    public void RecordLoginAttempt_ExitoReseteaElContador()
+    {
+        var user = CrearUsuario();
+        user.RecordLoginAttempt(false, Ahora);
+
+        user.RecordLoginAttempt(true, Ahora);
 
         user.AccessFailedCount.Should().Be(0);
-        user.LockoutEndUtc.Should().BeNull();
-        user.LastLoginAtUtc.Should().Be(Now);
+        user.LastLoginAtUtc.Should().Be(Ahora);
     }
 
     [Fact]
-    public void RecordLoginAttempt_Should_LockAccountAfterMaxFailures()
+    public void ChangePassword_RevocaLasSesiones()
     {
-        var user = RegisterFixture();
+        var user = CrearUsuario();
+        user.IssueRefreshToken("hash-1", Ahora.AddDays(7), Ahora);
 
-        for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
-        {
-            user.RecordLoginAttempt(false, Now);
-        }
+        user.ChangePassword("nuevo-hash", Ahora);
 
-        user.IsLockedOut(Now).Should().BeTrue();
-        user.LockoutEndUtc.Should().Be(Now.Add(User.DefaultLockoutDuration));
-        user.DomainEvents.Should().ContainSingle(e => e is UserLockedOutEvent);
+        user.CountActiveSessions(Ahora).Should().Be(0);
+        user.PasswordHash.Hash.Should().Be("nuevo-hash");
     }
 
     [Fact]
-    public void Lockout_Should_ExpireAfterDuration()
+    public void ChangePassword_RechazaHashVacio()
+        => FluentActions.Invoking(() => CrearUsuario().ChangePassword("  ", Ahora))
+            .Should().Throw<DomainValidationException>();
+
+    [Fact]
+    public void RegenerarApiKey_CambiaElValor()
     {
-        var user = RegisterFixture();
+        var user = CrearUsuario();
+        var anterior = user.ApiKey.Value;
 
-        for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
-        {
-            user.RecordLoginAttempt(false, Now);
-        }
+        user.RegenerarApiKey(Ahora);
 
-        user.IsLockedOut(Now).Should().BeTrue();
-        user.IsLockedOut(Now.Add(User.DefaultLockoutDuration).AddSeconds(1)).Should().BeFalse();
+        user.ApiKey.Value.Should().NotBe(anterior);
     }
 
     [Fact]
-    public void RecordLoginAttempt_Should_BeNoOpWhileLocked()
+    public void Activar_RestauraLaCuenta()
     {
-        var user = RegisterFixture();
-        user.RecordLoginAttempt(false, Now);
-        user.RecordLoginAttempt(false, Now);
-        user.RecordLoginAttempt(false, Now);
-        user.RecordLoginAttempt(false, Now);
-        user.RecordLoginAttempt(false, Now);
-        var lockedAt = user.LockoutEndUtc;
+        var user = CrearUsuario();
+        user.Deactivate(Ahora);
 
-        user.RecordLoginAttempt(true, Now);
+        user.Activate(Ahora);
 
-        user.IsLockedOut(Now).Should().BeTrue();
-        user.LockoutEndUtc.Should().Be(lockedAt);
+        user.EvaluateAuthentication(Ahora).Should().Be(AuthenticationBlock.None);
     }
-
-    [Fact]
-    public void IssueRefreshToken_Should_AddTokenToCollection()
-    {
-        var user = RegisterFixture();
-
-        var token = user.IssueRefreshToken("hash", Now.AddDays(7), Now);
-
-        token.UserId.Should().Be(user.Id);
-        user.RefreshTokens.Should().ContainSingle(t => t.Id == token.Id);
-    }
-
-    [Fact]
-    public void IssueRefreshToken_Should_RevokeOldestActiveWhenLimitReached()
-    {
-        var user = RegisterFixture();
-        var tokens = new List<RefreshToken>();
-
-        for (var i = 0; i < User.MaxActiveRefreshTokens + 1; i++)
-        {
-            tokens.Add(user.IssueRefreshToken($"hash-{i}", Now.AddDays(7), Now.AddMinutes(i + 1)));
-        }
-
-        user.RefreshTokens.Should().HaveCount(User.MaxActiveRefreshTokens + 1);
-        tokens[0].IsRevoked.Should().BeTrue();
-        tokens[0].RevokedReason.Should().Be(RevocationReason.SessionLimitReached);
-        user.RefreshTokens.Count(t => t.IsActive(Now)).Should().Be(User.MaxActiveRefreshTokens);
-    }
-
-    [Fact]
-    public void RevokeAllRefreshTokens_Should_RevokeAllAndRaiseEvents()
-    {
-        var user = RegisterFixture();
-        user.IssueRefreshToken("hash-1", Now.AddDays(7), Now);
-        user.IssueRefreshToken("hash-2", Now.AddDays(7), Now);
-
-        user.RevokeAllRefreshTokens(RevocationReason.SecurityBreach, Now);
-
-        user.RefreshTokens.Should().OnlyContain(t => t.IsRevoked);
-        user.DomainEvents.OfType<RefreshTokenRevokedEvent>()
-            .Should().HaveCount(2).And.OnlyContain(e => e.Reason == RevocationReason.SecurityBreach);
-    }
-
-    private static User RegisterFixture() =>
-        User.Register("john@example.com", "hash", UserRole.Member, Now);
 }

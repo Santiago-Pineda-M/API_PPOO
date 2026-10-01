@@ -1,14 +1,11 @@
-using ApiPoo2.Application.Exceptions;
-using ApiPoo2.Application.IRepositories;
-using ApiPoo2.Application.IServices;
-using ApiPoo2.Application.DTOs;
-using ApiPoo2.Domain.Enums;
+using ApiPoo2.Application.UseCases.Auth;
+using ApiPoo2.Domain.RefreshTokens;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Auth.RefreshToken;
+namespace ApiPoo2.Application.UseCases.Auth;
 
-public sealed class RefreshTokenUseCase : BaseUseCase<RefreshTokenInputDto, RefreshTokenPairDto>
+public sealed class RefreshTokenUseCase : BaseUseCase<RefreshTokenInputDto, RefreshTokenPairOutputDto>
 {
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IUserRepository _userRepository;
@@ -33,7 +30,7 @@ public sealed class RefreshTokenUseCase : BaseUseCase<RefreshTokenInputDto, Refr
         _unitOfWork = unitOfWork;
     }
 
-    protected override async Task<RefreshTokenPairDto> ExecuteCoreAsync(RefreshTokenInputDto request, CancellationToken cancellationToken)
+    protected override async Task<RefreshTokenPairOutputDto> ExecuteCoreAsync(RefreshTokenInputDto request, CancellationToken cancellationToken)
     {
         var now = _dateTimeProvider.UtcNow;
         var hash = _jwtTokenService.HashRefreshToken(request.RefreshToken);
@@ -44,10 +41,15 @@ public sealed class RefreshTokenUseCase : BaseUseCase<RefreshTokenInputDto, Refr
             throw new UnauthorizedException("refresh.invalid", "Token de refresco inválido.");
         }
 
-        if (storedToken.IsUsed)
+        var persona = await _userRepository.GetPersonaByIdAsync(storedToken.UserId, cancellationToken)
+            ?? throw new UnauthorizedException("refresh.invalid", "Token de refresco inválido.");
+
+        var user = persona.Usuario
+            ?? throw new UnauthorizedException("refresh.invalid", "Token de refresco inválido.");
+
+        if (storedToken.WasRotated())
         {
-            var compromised = await _userRepository.GetByIdWithRefreshTokensAsync(storedToken.UserId, cancellationToken);
-            compromised?.RevokeAllRefreshTokens(RevocationReason.SecurityBreach, now);
+            user.RevokeAllRefreshTokens(RevocationReason.SecurityBreach, now);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("refresh.reuse", "Se detectó reuso de token de refresco. Sesión revocada.");
         }
@@ -56,9 +58,6 @@ public sealed class RefreshTokenUseCase : BaseUseCase<RefreshTokenInputDto, Refr
         {
             throw new UnauthorizedException("refresh.invalid", "Token de refresco expirado o revocado.");
         }
-
-        var user = await _userRepository.GetByIdWithRefreshTokensAsync(storedToken.UserId, cancellationToken)
-            ?? throw new UnauthorizedException("refresh.invalid", "Token de refresco inválido.");
 
         var access = _jwtTokenService.CreateAccessToken(user, now);
         var refresh = _jwtTokenService.CreateRefreshToken(now);
@@ -69,6 +68,6 @@ public sealed class RefreshTokenUseCase : BaseUseCase<RefreshTokenInputDto, Refr
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return RefreshTokenPairDto.Create(access, refresh, now);
+        return RefreshTokenPairOutputDto.Create(access, refresh, now, user.ApiKey);
     }
 }

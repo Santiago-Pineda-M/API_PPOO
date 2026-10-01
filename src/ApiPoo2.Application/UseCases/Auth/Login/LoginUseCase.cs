@@ -1,14 +1,12 @@
-using ApiPoo2.Application.Exceptions;
-using ApiPoo2.Application.IRepositories;
-using ApiPoo2.Application.IServices;
-using ApiPoo2.Application.DTOs;
-using ApiPoo2.Domain.Entities;
+using ApiPoo2.Application.UseCases.Auth;
+using ApiPoo2.Domain.Personas;
+using ApiPoo2.Domain.Users;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Auth.Login;
+namespace ApiPoo2.Application.UseCases.Auth;
 
-public sealed class LoginUseCase : BaseUseCase<LoginInputDto, LoginTokenPairDto>
+public sealed class LoginUseCase : BaseUseCase<LoginInputDto, LoginTokenPairOutputDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
@@ -36,26 +34,24 @@ public sealed class LoginUseCase : BaseUseCase<LoginInputDto, LoginTokenPairDto>
         _unitOfWork = unitOfWork;
     }
 
-    protected override async Task<LoginTokenPairDto> ExecuteCoreAsync(LoginInputDto request, CancellationToken cancellationToken)
+    protected override async Task<LoginTokenPairOutputDto> ExecuteCoreAsync(LoginInputDto request, CancellationToken cancellationToken)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
+        var login = Login.From(request.Login);
         var now = _dateTimeProvider.UtcNow;
 
-        var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+        var user = await _userRepository.GetByLoginAsync(login, cancellationToken);
 
         if (user is null)
         {
             throw new UnauthorizedException("credentials.invalid", "Credenciales inválidas.");
         }
 
-        if (!user.IsActive)
+        switch (user.EvaluateAuthentication(now))
         {
-            throw new UnauthorizedException("account.inactive", "La cuenta está desactivada.");
-        }
-
-        if (user.IsLockedOut(now))
-        {
-            throw new UnauthorizedException("account.locked", "Cuenta bloqueada temporalmente por demasiados intentos fallidos.");
+            case AuthenticationBlock.Inactive:
+                throw new UnauthorizedException("account.inactive", "La cuenta está desactivada.");
+            case AuthenticationBlock.LockedOut:
+                throw new UnauthorizedException("account.locked", "Cuenta bloqueada temporalmente por demasiados intentos fallidos.");
         }
 
         var passwordValid = _passwordHasher.Verify(request.Password, user.PasswordHash.Hash);
@@ -75,6 +71,6 @@ public sealed class LoginUseCase : BaseUseCase<LoginInputDto, LoginTokenPairDto>
         _refreshTokenRepository.Add(refreshToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return LoginTokenPairDto.Create(access, refresh, now);
+        return LoginTokenPairOutputDto.Create(access, refresh, now, user.ApiKey);
     }
 }

@@ -1,13 +1,11 @@
-using ApiPoo2.Application.Exceptions;
-using ApiPoo2.Application.IRepositories;
-using ApiPoo2.Application.IServices;
-using ApiPoo2.Application.DTOs;
+using ApiPoo2.Domain.Users;
+using ApiPoo2.Application.UseCases.Auth;
 using ApiPoo2.Domain.Common;
-using ApiPoo2.Domain.Enums;
+using ApiPoo2.Domain.RefreshTokens;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Auth.ChangePassword;
+namespace ApiPoo2.Application.UseCases.Auth;
 
 public sealed class ChangePasswordUseCase : BaseUseCase<ChangePasswordInputDto, OperationResult>
 {
@@ -36,8 +34,11 @@ public sealed class ChangePasswordUseCase : BaseUseCase<ChangePasswordInputDto, 
 
     protected override async Task<OperationResult> ExecuteCoreAsync(ChangePasswordInputDto request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdWithRefreshTokensAsync(request.UserId, cancellationToken)
-            ?? throw new NotFoundException("user.not_found", "El usuario no existe.");
+        var persona = await _userRepository.GetPersonaByIdAsync(request.PersonaId, cancellationToken)
+            ?? throw new NotFoundException("person.not_found", "La persona no existe.");
+
+        var user = persona.Usuario
+            ?? throw new NotFoundException("user.not_found", "La persona no tiene un usuario asociado.");
 
         if (!_passwordHasher.Verify(request.CurrentPassword, user.PasswordHash.Hash))
         {
@@ -50,10 +51,9 @@ public sealed class ChangePasswordUseCase : BaseUseCase<ChangePasswordInputDto, 
         var newHash = _passwordHasher.Hash(request.NewPassword);
 
         user.ChangePassword(newHash, now);
-        user.RevokeAllRefreshTokens(RevocationReason.PasswordChanged, now);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _blacklistService.BlacklistAsync(request.AccessTokenJti, user.Id, request.AccessTokenExpiresAtUtc, cancellationToken);
+        await _blacklistService.BlacklistAsync(request.AccessTokenJti, persona.Id, request.AccessTokenExpiresAtUtc, cancellationToken);
 
         return OperationResult.Success();
     }

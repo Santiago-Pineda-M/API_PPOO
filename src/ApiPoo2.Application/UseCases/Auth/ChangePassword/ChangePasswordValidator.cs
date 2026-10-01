@@ -1,7 +1,7 @@
-using ApiPoo2.Application.DTOs;
+using ApiPoo2.Application.UseCases.Auth;
 using FluentValidation;
 
-namespace ApiPoo2.Application.UseCases.Auth.ChangePassword;
+namespace ApiPoo2.Application.UseCases.Auth;
 
 public sealed class ChangePasswordValidator : AbstractValidator<ChangePasswordInputDto>
 {

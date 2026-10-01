@@ -1,11 +1,8 @@
-using ApiPoo2.Application.IRepositories;
-using ApiPoo2.Application.IServices;
-using ApiPoo2.Application.DTOs;
-using ApiPoo2.Domain.Enums;
+using ApiPoo2.Domain.RefreshTokens;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.UseCases.Auth.Logout;
+namespace ApiPoo2.Application.UseCases.Auth;
 
 public sealed class LogoutUseCase : BaseUseCase<LogoutInputDto, OperationResult>
 {
@@ -32,28 +29,33 @@ public sealed class LogoutUseCase : BaseUseCase<LogoutInputDto, OperationResult>
         _unitOfWork = unitOfWork;
     }
 
-    protected override async Task<OperationResult> ExecuteCoreAsync(LogoutInputDto request, CancellationToken cancellationToken)
+    protected override async Task<OperationResult> ExecuteCoreAsync(
+        LogoutInputDto request,
+        CancellationToken cancellationToken)
     {
         var now = _dateTimeProvider.UtcNow;
 
-        await _blacklistService.BlacklistAsync(request.AccessTokenJti, request.UserId, request.AccessTokenExpiresAtUtc, cancellationToken);
+        await _blacklistService.BlacklistAsync(
+            request.AccessTokenJti,
+            request.PersonaId,
+            request.AccessTokenExpiresAtUtc,
+            cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(request.RefreshToken))
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
         {
-            var user = await _userRepository.GetByIdWithRefreshTokensAsync(request.UserId, cancellationToken);
-
-            if (user is not null)
-            {
-                var hash = _jwtTokenService.HashRefreshToken(request.RefreshToken);
-                var token = user.RefreshTokens.FirstOrDefault(t => t.TokenHash == hash);
-
-                if (token is not null)
-                {
-                    user.RevokeRefreshToken(token.Id, RevocationReason.Logout, now);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-                }
-            }
+            return OperationResult.Success();
         }
+
+        var persona = await _userRepository.GetPersonaByIdAsync(request.PersonaId, cancellationToken)
+            ?? throw new NotFoundException("person.not_found", "La persona no existe.");
+
+        var user = persona.Usuario
+            ?? throw new NotFoundException("user.not_found", "La persona no tiene un usuario asociado.");
+
+        var hash = _jwtTokenService.HashRefreshToken(request.RefreshToken);
+        user.FindRefreshToken(hash)?.Revoke(RevocationReason.Logout, now);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return OperationResult.Success();
     }

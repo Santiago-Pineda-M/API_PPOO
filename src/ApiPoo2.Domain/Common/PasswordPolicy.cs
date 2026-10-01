@@ -1,5 +1,3 @@
-using ApiPoo2.Domain.Exceptions;
-
 namespace ApiPoo2.Domain.Common;
 
 public static class PasswordPolicy

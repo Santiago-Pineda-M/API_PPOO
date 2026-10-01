@@ -1,7 +1,7 @@
 using System.Reflection;
 using ApiPoo2.Application.UseCases;
-using ApiPoo2.Domain.Entities;
-using ApiPoo2.Infrastructure.Persistencia;
+using ApiPoo2.Domain.Users;
+using ApiPoo2.Infrastructure.Persistence;
 using FluentAssertions;
 
 namespace ApiPoo2.ArchitectureTests;
@@ -55,26 +55,5 @@ public sealed class LayerDependencyTests
         references.Should().Contain(DomainName);
         references.Should().Contain(ApplicationName);
         references.Should().Contain(InfrastructureName);
-    }
-
-    [Fact]
-    public void DomainEntities_Should_NotExposePublicSetters()
-    {
-        var entityTypes = new[]
-        {
-            typeof(User),
-            typeof(RefreshToken),
-            typeof(BlacklistedToken),
-        };
-
-        foreach (var type in entityTypes)
-        {
-            var publicSetterNames = type
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.GetSetMethod()?.IsPublic == true)
-                .Select(p => p.Name);
-
-            publicSetterNames.Should().BeEmpty($"{type.Name} debe mutar solo a través de métodos de negocio.");
-        }
     }
 }

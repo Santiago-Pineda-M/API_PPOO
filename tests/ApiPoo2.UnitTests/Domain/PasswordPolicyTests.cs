@@ -1,5 +1,4 @@
 using ApiPoo2.Domain.Common;
-using ApiPoo2.Domain.Exceptions;
 using FluentAssertions;
 
 namespace ApiPoo2.UnitTests.Domain;

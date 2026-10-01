@@ -3,6 +3,10 @@ using ApiPoo2.Domain.Common;
 
 namespace ApiPoo2.Application.IRepositories;
 
+/// <summary>
+///     Repositorio genérico para entidades con identidad <see cref="Guid" />.
+///     <see cref="Users.User" /> queda afuera porque su primary key es compuesta.
+/// </summary>
 public interface IRepository<T>
     where T : BaseEntity
 {

@@ -1,5 +1,5 @@
 using ApiPoo2.Application.Exceptions;
-using ApiPoo2.Domain.Exceptions;
+using ApiPoo2.Domain.Common;
 
 namespace ApiPoo2.WebApi.Middleware;
 

@@ -1,7 +1,8 @@
-using ApiPoo2.Application.DTOs;
+using ApiPoo2.Domain.RefreshTokens;
+using ApiPoo2.Application.UseCases.Auth;
 using FluentValidation;
 
-namespace ApiPoo2.Application.UseCases.Auth.RefreshToken;
+namespace ApiPoo2.Application.UseCases.Auth;
 
 public sealed class RefreshTokenValidator : AbstractValidator<RefreshTokenInputDto>
 {

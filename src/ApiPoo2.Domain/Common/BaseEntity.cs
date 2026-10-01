@@ -1,20 +1,18 @@
 namespace ApiPoo2.Domain.Common;
 
-public abstract class BaseEntity : IHasDomainEvents
+public abstract class BaseEntity
 {
-    private readonly List<IDomainEvent> _domainEvents = [];
+    public Guid Id { get; private set; }
 
-    public Guid Id { get; protected set; } = Guid.NewGuid();
+    public DateTime CreatedAtUtc { get; private set; }
 
-    public DateTime CreatedAtUtc { get; protected set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAtUtc { get; private set; }
 
-    public DateTime? UpdatedAtUtc { get; protected set; }
-
-    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-
-    public void ClearDomainEvents() => _domainEvents.Clear();
-
-    protected void RaiseDomainEvent(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
+    protected void Initialize(Guid id, DateTime createdAtUtc)
+    {
+        Id = id;
+        CreatedAtUtc = createdAtUtc;
+    }
 
     protected void MarkUpdated(DateTime utcNow) => UpdatedAtUtc = utcNow;
 }
