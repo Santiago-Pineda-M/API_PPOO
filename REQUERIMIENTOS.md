@@ -91,7 +91,7 @@ Criterios de entrega:
 
 Contrato:
 
-- `GET /api/vehiculos?tipoVehiculo=Automovil|Motocicleta`
+- `GET /api/vehiculos/tipo/{tipoVehiculo}` (`Automovil` o `Motocicleta`)
 
 Criterios de entrega:
 
@@ -102,23 +102,36 @@ Criterios de entrega:
 
 Contrato:
 
-- `GET /api/vehiculos?documentoCodigo={codigo}`
+- `GET /api/vehiculos/tipo-documento/{codigo}`
 
 Criterios de entrega:
 
 - Devuelve vehículos que tengan asociado el mismo documento paramétrico.
-- Si el código no existe, responde lista vacía o `404` según el contrato final.
+- Si el código no existe, responde lista vacía.
+- Endpoint protegido con token + APIKey.
 
 ## F-E1-VEH-05 — Buscar vehículos por estado de documento
 
 Contrato:
 
-- `GET /api/vehiculos?estadoDocumento=Habilitado|Vencido|EnVerificacion`
+- `GET /api/vehiculos/estado-documento/{estado}` (`Habilitado`, `Vencido` o `EnVerificacion`)
 
 Criterios de entrega:
 
 - `Vencido` se deriva por fecha, aunque el estado almacenado sea otro.
 - Endpoint protegido con token + APIKey.
+
+## F-E1-VEH-05b — Consultar vehículo por id
+
+Contrato:
+
+- `GET /api/vehiculos/{id}`
+
+Criterios de entrega:
+
+- Devuelve el vehículo con sus conductores asociados y sus documentos (metadatos, no el binario).
+- Si no existe, responde `404`.
+- Endpoint protegido con token + APIKey (la versión pública por placa es `F-E2-PUB-03`).
 
 ## F-E1-VEH-06 — Actualizar vehículo
 
@@ -157,6 +170,19 @@ Criterios de entrega:
 
 - Acepta uno o varios documentos en la misma llamada.
 - Si el documento ya estaba asociado, actualiza su archivo y vuelve a `EN_VERIFICACION`.
+- Protegido con token + APIKey.
+
+## F-E1-VEH-09 — Cambiar estado de un documento asociado
+
+Contrato:
+
+- `PUT /api/vehiculos/{vehiculoId}/documentos/{tipoDocumentoId}/estado` con `{ estado }`
+
+Criterios de entrega:
+
+- Permite pasar a `Habilitado` o volver a `EnVerificacion`.
+- `Vencido` no se asigna manualmente: siempre se deriva de la fecha de vencimiento.
+- Si la asociación no existe, responde `404`.
 - Protegido con token + APIKey.
 
 ---
@@ -519,11 +545,30 @@ Estas tres se garantizan en dominio, casos de uso y pruebas.
 
 ---
 
+# Operación y documentación
+
+## F-OPS-01 — CORS configurable
+
+- Política `Frontend` con orígenes por `Cors__AllowedOrigins` (separados por coma).
+- Sin configurar, el navegador bloquea el cross-origin; Postman/curl no se ven afectados.
+
+## F-OPS-02 — Health check
+
+- `GET /health` (público): responde `200` si PostgreSQL responde.
+- Sin paquetes extra: usa el propio `DbContext` con `SELECT 1`.
+
+## F-OPS-03 — Swagger completo
+
+- Esquemas `Bearer` (JWT) y `ApiKey` (`X-Api-Key`) registrados.
+- Cada endpoint muestra su seguridad real: públicos sin candado, auth solo Bearer, escritura Bearer + APIKey.
+
+---
+
 # Criterios globales de entrega
 
-- Migraciones generadas por EF Core, sin SQL manual divergente.
+- Migraciones generadas por EF Core, sin SQL manual divergente (una sola `InitialSchema` aplanada).
 - `dotnet build` limpio.
-- Pruebas unitarias, aplicación, arquitectura e integración en verde.
-- Pruebas de integración contra PostgreSQL local en Docker, con schema aislado por ejecución.
+- Pruebas en verde: 117 unitarias + 29 aplicación + 13 arquitectura + 18 integración = **177/177**.
+- Pruebas de integración contra PostgreSQL local en Docker (`api-poo2-test-db:5433`, `.env.test`), con schema aislado por ejecución; Neon reservado para producción.
 - Base de producción sin datos de prueba antes de la entrega.
 - Colección Postman con los flujos E1/E2 y los casos públicos/protegidos.

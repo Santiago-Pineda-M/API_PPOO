@@ -45,7 +45,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 
 **Responsabilidades**
 
-- Entidades por agregado: `Persona` + `ConductorVehiculo`, `Vehiculo`, `Documento` + `VehiculoDocumento`, `User`, `RefreshToken`, `BlacklistedToken`.
+- Entidades por agregado: `Persona` + `ConductorVehiculo`, `Vehiculo`, `TipoDocumento` + `DocumentoVehiculo`, `User`, `RefreshToken`, `BlacklistedToken`.
 - Value Objects: `NumeroIdentificacion`, `Nombres`, `Apellidos`, `CorreoElectronico`, `Login`, `ApiKey`, `Placa`, `Color`, `Marca`, `Linea`, `DocumentoCodigo`, `DocumentoNombre`, `DocumentoDescripcion`, `NombreArchivo`, `ContenidoDocumento`, `PasswordHash`.
 - Enums: `TipoIdentificacion`, `TipoPersona`, `EstadoConductor`, `TipoVehiculo`, `TipoServicio`, `TipoCombustible`, `TiposVehiculoAplicables`, `CodigoObligatoriedad`, `EstadoDocumento`, `UserRole`, `RevocationReason`.
 - Sin eventos de dominio: se eliminaron por ser código muerto.
@@ -59,7 +59,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 **Reglas / limitaciones**
 
 - **Cero dependencias** de proyecto y cero librerías externas.
-- Entidades con setters privados; **mutación solo por métodos/factorías de dominio** (ej. `Persona.CrearUsuario`, `User.Crear`, `Vehiculo.Register`, `Vehiculo.AdjuntarDocumento`, `Vehiculo.Actualizar`, `Documento.Register`, `User.ChangePassword`, `User.RegenerarApiKey`, `RefreshToken.Issue`, `RefreshToken.RotateTo`).
+- Entidades con setters privados; **mutación solo por métodos/factorías de dominio** (ej. `Persona.CrearUsuario`, `User.Crear`, `Vehiculo.Register`, `Vehiculo.AdjuntarDocumento`, `Vehiculo.Actualizar`, `TipoDocumento.Register`, `User.ChangePassword`, `User.RegenerarApiKey`, `RefreshToken.Issue`, `RefreshToken.RotateTo`).
 - Identidad normalmente `Guid` con `BaseEntity.Initialize` y `MarkUpdated(utcNow)` en toda mutación. Excepciones documentadas por PK compuesta: `User` (`id_persona + login`) y `DocumentoVehiculo` (`id_vehiculo + id_tipo_documento`).
 - No hay eventos de dominio; tampoco se registran estados en constructores.
 
@@ -109,9 +109,12 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 - **Composición root**: `Program.cs` (`public partial class Program`), registro de ambas capas inferiores y middleware.
 - **Controllers**: endpoints REST. Inyectan use cases concretos por constructor (uno por endpoint) y bindean los `InputDto` de Application como `[FromBody]` o los arman con valores de ruta/claims.
 - **Seguridad dual**: JWT autentica; la policy `ApiKey` exige además `X-Api-Key` y que pertenezca al usuario autenticado. Los endpoints de escritura de E1/E2 la requieren; las consultas públicas usan `[AllowAnonymous]`.
+- **Bootstrap**: `POST /api/bootstrap/admin` (público) crea el primer administrativo desde `Bootstrap__*` del `.env`; solo funciona con base vacía (`403 bootstrap.disabled` en otro caso).
+- **CORS**: política `Frontend` con orígenes de `Cors__AllowedOrigins` (coma-separados); va antes de auth en el pipeline.
+- **Salud**: `GET /health` (público) con chequeo real a PostgreSQL vía `DatabaseHealthCheck`, sin paquetes extra.
 - **Extensiones de claims**: `GetPersonaId()`, `GetTokenJti()`, `GetTokenExpiresAtUtc()` fabrican campos derivados del access token (nunca vienen del body del cliente).
 - **Middleware de errores**: `ExceptionHandlingMiddleware` mapea excepciones tipadas a `application/problem+json` `{status, code, message, errors, traceId}`.
-- Configuración Swagger.
+- Configuración Swagger con esquemas `Bearer` y `ApiKey`, y filtro que refleja la seguridad real por endpoint.
 
 **Reglas / limitaciones**
 
@@ -140,7 +143,7 @@ ApiPoo2.sln
 │   │   ├── Common/           IDateTimeProvider, PagedFilter, PagedResult
 │   │   ├── Exceptions/       BaseApplicationException y subclases
 │   │   ├── IRepositories/    IRepository<T>, I<Entidad>Repository, IUnitOfWork
-│   │   ├── IServices/        IPasswordHasher, IJwtTokenService, IJwtTokenBlacklistService, IDateTimeProvider, JwtOptions
+│   │   ├── IServices/        IPasswordHasher, IJwtTokenService, IJwtTokenBlacklistService, JwtOptions
 │   │   ├── UseCases/
 │   │   │   ├── IUseCase.cs
 │   │   │   ├── BaseUseCase.cs
@@ -152,7 +155,7 @@ ApiPoo2.sln
 │   │   │   ├── AppDbContext.cs
 │   │   │   ├── Configurations/      <Entidad>Configuration.cs y converters
 │   │   │   ├── Exceptions/          PersistenceErrors.cs
-│   │   │   ├── Migrations/          <timestamp>_<Name>.cs
+│   │   │   ├── Migrations/          InitialSchema única (aplanada)
 │   │   │   ├── Repositories/        GenericRepository.cs, <Entidad>Repository.cs, UnitOfWork.cs
 │   │   │   └── DesignTimeDbContextFactory.cs
 │   │   ├── Security/         PasswordHasher, JwtTokenService, JwtTokenBlacklistService, TokenCleanupBackgroundService
@@ -161,13 +164,14 @@ ApiPoo2.sln
 │   │   └── DependencyInjection.cs
 │   └── ApiPoo2.WebApi/
 │       ├── Auth/             ApiKeyRequirement, ApiKeyHandler
-│       ├── Controllers/      AuthController, PersonasController, UsuariosController, VehiculosController, TiposDocumentoController, ConductoresController, UsersController
+│       ├── Controllers/      AuthController, PersonasController, UsuariosController, VehiculosController, TiposDocumentoController, ConductoresController, UsersController, BootstrapController
 │       ├── Extensions/       ClaimsPrincipalExtensions, SwaggerExtensions
+│       ├── Health/           DatabaseHealthCheck
 │       ├── Middleware/       ExceptionHandlingMiddleware
 │       └── Program.cs
 └── tests/
     ├── ApiPoo2.UnitTests/          Domain/, Persistence/
-    ├── ApiPoo2.Application.Tests/  Common/ (Pagination, PasswordPolicy)
+    ├── ApiPoo2.Application.Tests/  Common/ (Pagination, PasswordPolicy), Bootstrap/
     ├── ApiPoo2.ArchitectureTests/  LayerDependencyTests, RichDomainModelTests
     └── ApiPoo2.IntegrationTests/   ApiFactory, ApiCollection, AuthApiTests, FuncionalesApiTests
 ```
@@ -374,7 +378,7 @@ Reglas:
 
 ### 8.3 Migraciones
 
-- Generar con: `dotnet ef migrations add <Name> --project src/ApiPoo2.Infrastructure` (usa la design-time factory que lee `.env`; no necesita startup project).
+- Generar con: `dotnet ef migrations add <Name> --project src/ApiPoo2.Infrastructure` (usa la design-time factory que lee `.env`; no necesita startup project). Hoy hay una sola `InitialSchema` aplanada: ante un cambio de modelo se agrega una migración nueva, no se reescribe la historia.
 - Antes de commitear, **revisar el SQL generado**: el concurrency por `xmin` genera `AddColumn xmin` que fallaría en Postgres → se deja la migración como no-op (la columna es del sistema, ya existe).
 - IntegrationTests usan `.env.test` y Docker local; `ApiFactory` crea el schema aislado y aplica migraciones ahí. Nunca apuntan a Neon.
 - Migraciones que tocan columnas/índices involucrados en mapeos (`personas_numero_identificacion`, `vehiculos_placa`, `xmin`) deben conservar los nombres.
@@ -384,7 +388,7 @@ Reglas:
 ## 9. Configuración y secretos
 
 - Toda la configuración viene del `.env` raíz en producción (cargado por `EnvFileLoader`) y de `.env.test` en pruebas; `appsettings.json` **no** tiene connection string ni JWT.
-- Claves: `DATABASE_URL` (Neon en producción; Docker local `api_poo2_test:5433` en pruebas), `Jwt__Secret` (≥ 32 chars), `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessTokenTtlMinutes`, `Jwt__RefreshTokenTtlDays` (`__` = separador de sección).
+- Claves: `DATABASE_URL` (Neon en producción; Docker local `api_poo2_test:5433` en pruebas), `Jwt__Secret` (≥ 32 chars), `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessTokenTtlMinutes`, `Jwt__RefreshTokenTtlDays`, `Cors__AllowedOrigins` (coma-separados, opcional), `Bootstrap__*` (datos del primer admin, opcional) (`__` = separador de sección).
 - Guardas de arranque (fail-fast) en `Infrastructure/DependencyInjection.AddAuth`.
 - `.env` y `.env.test` están gitignoreados: nunca commitearlos ni loguear/echo de sus valores.
 
@@ -393,7 +397,7 @@ Reglas:
 ## 10. Reglas de tests
 
 - **UnitTests** (offline, rápidos): entidades, value objects y `PasswordPolicy`.
-- **ApplicationTests** (offline): comportamiento de la capa Application sin DB — `PasswordPolicy` (la política que la entidad no puede imponer) y paginación.
+- **ApplicationTests** (offline): comportamiento de la capa Application sin DB — `PasswordPolicy` (la política que la entidad no puede imponer), paginación y bootstrap del primer admin (con repositorios falsos en memoria).
 - **ArchitectureTests** (offline): refs de capas + invariantes del modelo rico (`RichDomainModelTests`: entidades `sealed`, sin constructores públicos, sin setters públicos, construidas solo por factorías).
 - **IntegrationTests** (requieren Docker local `api_poo2-test-db:5433` y red local): `WebApplicationFactory<Program>`. Usan identificaciones/placas/códigos únicos; preferir `--filter` al iterar.
   - **Aislamiento por ejecución**: `ApiFactory` crea un schema propio (`test_<guid>`) inyectándolo como `Search Path` en la cadena de conexión, reproduce todas las migraciones ahí, siembra un administrativo mínimo y lo borra con `CASCADE` al terminar. Las ejecuciones no tocan las tablas de `public` ni dejan residuos. Neon queda reservado para producción.

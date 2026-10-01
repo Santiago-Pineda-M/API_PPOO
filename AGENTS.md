@@ -1,6 +1,6 @@
 # AGENTS.md
 
-.NET 10 Clean Architecture auth API (register / login / JWT access + rotating refresh tokens / token blacklist). PostgreSQL via Npgsql. Team writes code identifiers in English but user-facing messages in Spanish.
+.NET 10 Clean Architecture API: personas (con usuarios auto-generados), vehículos, documentos paramétricos y auth (JWT access + rotating refresh tokens / blacklist + APIKey). PostgreSQL via Npgsql. Team writes code identifiers in English but user-facing messages in Spanish.
 
 > Manual completo de arquitectura, responsabilidades por capa, estructura de directorios y convenciones: **`ARCHITECTURE.md`**.
 
@@ -18,14 +18,14 @@
 - Run API: `dotnet run --project src/ApiPoo2.WebApi` (http `:5114`, https `:7062`)
 - All tests: `dotnet test ApiPoo2.sln`
 - Single test: `dotnet test tests/ApiPoo2.UnitTests --filter "FullyQualifiedName~UserTests"`
-- Integration tests use local Docker PostgreSQL only: start `api-poo2-test-db` on `localhost:5433` before running them (for example `podman run ...` or `docker compose up -d postgres-test`). Never point integration tests at Neon.
+- Integration tests use local Docker PostgreSQL only: start `api-poo2-test-db` on `localhost:5433` before running them (`podman start api-poo2-test-db`, or first time `podman run -d --name api-poo2-test-db -e POSTGRES_DB=api_poo2_test -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=test_password -p 5433:5432 docker.io/library/postgres:16-alpine`). Never point integration tests at Neon.
 - `dotnet ef` is a global tool; run it with `$HOME/.dotnet/tools` on `PATH` (add `--project src/ApiPoo2.Infrastructure`; a startup project is not needed)
 - New migration: `dotnet ef migrations add <Name> --project src/ApiPoo2.Infrastructure` (design-time factory in Infrastructure reads root `.env`; no startup project needed)
 
 ## Config & secrets
 
 - All config comes from the repo-root `.env`, loaded by `EnvFileLoader.LoadFromRepositoryRoot()` (walks up from `AppContext.BaseDirectory`). Integration tests instead load repo-root `.env.test` through `EnvFileLoader.LoadTestEnvironment()` and force those process values, so tests always use the local Docker database. `appsettings.json` intentionally has no connection string or JWT config — don't add them there.
-- Keys: `DATABASE_URL` (production PostgreSQL on Neon; integration `DATABASE_URL` points to local Docker `api_poo2_test` on `localhost:5433`) and `Jwt__Secret` (min 32 chars, enforced at startup), `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessTokenTtlMinutes`, `Jwt__RefreshTokenTtlDays`. `__` maps to config section separators.
+- Keys: `DATABASE_URL` (production PostgreSQL on Neon; integration `DATABASE_URL` points to local Docker `api_poo2_test` on `localhost:5433`) and `Jwt__Secret` (min 32 chars, enforced at startup), `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessTokenTtlMinutes`, `Jwt__RefreshTokenTtlDays`. `__` maps to config section separators. Optional: `Cors__AllowedOrigins` (comma-separated; empty blocks browser cross-origin) and `Bootstrap__*` (first-admin data for `POST /api/bootstrap/admin`).
 - `.env` and `.env.test` hold live/test credentials and are gitignored (along with `bin/`/`obj/`). Never commit them or echo their values.
 
 ## Conventions & gotchas
@@ -45,5 +45,5 @@
 ## Testing gotchas
 
 - IntegrationTests use `WebApplicationFactory<Program>` and need the local Docker `DATABASE_URL` from `.env.test` to be reachable on `localhost:5433`; they never use Neon. `ApiFactory` **is** isolated: it appends a per-run `Search Path` schema to the connection string, creates it, replays every migration into it, seeds one administrative persona for bootstrapping protected endpoints, and drops it with `CASCADE` on dispose — so runs no longer mutate `public` tables or leave residue. The isolation depends on `NpgsqlConnectionStringBuilder.SearchPath`; keep it if you touch `ApiFactory`.
-- ApplicationTests cover `PasswordPolicy` and pagination offline (no DB).
+- ApplicationTests cover `PasswordPolicy`, pagination and bootstrap offline (no DB).
 - Unit, Application and Architecture tests are fast and offline. Integration tests use the local Docker database and replay all migrations per run, so they remain the slower suite; prefer `--filter` when iterating.
