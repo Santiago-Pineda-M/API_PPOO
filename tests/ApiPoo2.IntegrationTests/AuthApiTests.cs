@@ -161,6 +161,17 @@ public sealed class AuthApiTests
     }
 
     [Fact]
+    public async Task Health_RespondeOkSinCredenciales()
+    {
+        _client.DefaultRequestHeaders.Authorization = null;
+        _client.DefaultRequestHeaders.Remove(ApiKeyRequirement.HeaderName);
+
+        var response = await _client.GetAsync("/health");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task ConsultaPublica_NoRequiereTokenNiApiKey()
     {
         _client.DefaultRequestHeaders.Authorization = null;
