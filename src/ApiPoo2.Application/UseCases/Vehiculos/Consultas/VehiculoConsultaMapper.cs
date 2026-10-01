@@ -18,7 +18,7 @@ internal static class VehiculoConsultaMapper
             .ToList();
 
         var conductores = vehiculo.GetConductores()
-            .Select(c => new ConductorVehiculoOutputDto(
+            .Select(c => new VehiculoConductorOutputDto(
                 c.PersonaId,
                 c.Persona?.Nombres.Value ?? string.Empty,
                 c.Persona?.Apellidos.Value ?? string.Empty,

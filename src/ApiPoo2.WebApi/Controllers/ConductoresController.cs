@@ -25,7 +25,7 @@ public sealed class ConductoresController : ControllerBase
 
     /// <summary>Asocia los vehículos que puede operar un conductor.</summary>
     [HttpPost("vehiculos")]
-    public async Task<ActionResult<IReadOnlyList<ConductorVehiculoOutputDto>>> Associate(
+    public async Task<ActionResult<IReadOnlyList<AssociateVehiculosOutputDto>>> Associate(
         [FromBody] AssociateVehiculosInputDto request,
         CancellationToken cancellationToken)
         => Ok(await _associate.ExecuteAsync(request, cancellationToken));

@@ -7,13 +7,13 @@ namespace ApiPoo2.Application.UseCases.Conductores;
 /// <summary>Asocia uno o varios vehículos que puede operar un conductor.</summary>
 public sealed record AssociateVehiculosInputDto(Guid PersonaId, IReadOnlyList<Guid> VehiculoIds);
 
-public sealed record ConductorVehiculoOutputDto(
+public sealed record AssociateVehiculosOutputDto(
     Guid PersonaId,
     Guid VehiculoId,
     DateTime FechaAsociacion,
     EstadoConductor Estado);
 
-public sealed class AssociateVehiculosUseCase : BaseUseCase<AssociateVehiculosInputDto, IReadOnlyList<ConductorVehiculoOutputDto>>
+public sealed class AssociateVehiculosUseCase : BaseUseCase<AssociateVehiculosInputDto, IReadOnlyList<AssociateVehiculosOutputDto>>
 {
     private readonly IPersonaRepository _personaRepository;
     private readonly IVehiculoRepository _vehiculoRepository;
@@ -38,7 +38,7 @@ public sealed class AssociateVehiculosUseCase : BaseUseCase<AssociateVehiculosIn
         _unitOfWork = unitOfWork;
     }
 
-    protected override async Task<IReadOnlyList<ConductorVehiculoOutputDto>> ExecuteCoreAsync(
+    protected override async Task<IReadOnlyList<AssociateVehiculosOutputDto>> ExecuteCoreAsync(
         AssociateVehiculosInputDto request,
         CancellationToken cancellationToken)
     {
@@ -59,7 +59,7 @@ public sealed class AssociateVehiculosUseCase : BaseUseCase<AssociateVehiculosIn
         }
 
         var now = _dateTimeProvider.UtcNow;
-        var resultados = new List<ConductorVehiculoOutputDto>();
+        var resultados = new List<AssociateVehiculosOutputDto>();
 
         foreach (var vehiculoId in request.VehiculoIds.Distinct())
         {
@@ -71,7 +71,7 @@ public sealed class AssociateVehiculosUseCase : BaseUseCase<AssociateVehiculosIn
             var relacion = ConductorVehiculo.Crear(persona.Id, vehiculoId, now);
             _conductorRepository.Add(relacion);
 
-            resultados.Add(new ConductorVehiculoOutputDto(
+            resultados.Add(new AssociateVehiculosOutputDto(
                 relacion.PersonaId,
                 relacion.VehiculoId,
                 relacion.FechaAsociacion,

@@ -21,7 +21,7 @@ public sealed record VehiculoConsultaOutputDto(
     string Marca,
     string Linea,
     IReadOnlyList<DocumentoVehiculoOutputDto> Documentos,
-    IReadOnlyList<ConductorVehiculoOutputDto> Conductores);
+    IReadOnlyList<VehiculoConductorOutputDto> Conductores);
 
 public sealed record DocumentoVehiculoOutputDto(
     Guid DocumentoId,
@@ -32,7 +32,7 @@ public sealed record DocumentoVehiculoOutputDto(
     EstadoDocumento Estado,
     long Tamano);
 
-public sealed record ConductorVehiculoOutputDto(
+public sealed record VehiculoConductorOutputDto(
     Guid PersonaId,
     string Nombres,
     string Apellidos,
