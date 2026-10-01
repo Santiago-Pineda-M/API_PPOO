@@ -84,19 +84,5 @@ public sealed class VehiculoConfiguration : IEntityTypeConfiguration<Vehiculo>
 
         builder.HasIndex(v => v.Placa).IsUnique();
         builder.HasIndex(v => v.TipoVehiculo);
-
-        builder.HasMany<ApiPoo2.Domain.Documentos.VehiculoDocumento>("Documentos")
-            .WithOne()
-            .HasForeignKey(d => d.VehiculoId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.Navigation("Documentos").UsePropertyAccessMode(PropertyAccessMode.Field);
-
-        builder.HasMany<ApiPoo2.Domain.Personas.ConductorVehiculo>("Conductores")
-            .WithOne()
-            .HasForeignKey(c => c.VehiculoId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.Navigation("Conductores").UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

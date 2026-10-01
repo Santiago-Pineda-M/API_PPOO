@@ -1,5 +1,6 @@
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.RefreshTokens;
+using ApiPoo2.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -34,5 +35,13 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.HasIndex(t => t.TokenHash).IsUnique();
         builder.HasIndex(t => new { t.UserId, t.UserLogin });
         builder.HasIndex(t => t.ExpiresAtUtc);
+
+        // Relación declarada una sola vez, con la navegación real del principal
+        // (User.RefreshTokensVisibles). Declararla también en UserConfiguration con el
+        // nombre del campo privado duplicaría la relación con una FK fantasma.
+        builder.HasOne<User>()
+            .WithMany(u => u.RefreshTokensVisibles)
+            .HasForeignKey(t => new { t.UserId, t.UserLogin })
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

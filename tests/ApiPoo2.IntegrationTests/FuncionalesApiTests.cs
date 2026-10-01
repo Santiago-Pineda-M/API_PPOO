@@ -127,6 +127,27 @@ public sealed class FuncionalesApiTests
         var detalle = await _client.GetAsync($"/api/vehiculos/{vehiculo.Id}");
         detalle.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        var ficha = await ReadAs<VehiculoDetalleDto>(detalle);
+        ficha.Documentos.Should().HaveCount(1);
+        ficha.Documentos[0].NombreArchivo.Should().Be("soat.pdf");
+        ficha.Documentos[0].Tamano.Should().BeGreaterThan(0);
+
+        var conductorNumero = NumeroUnico();
+        var conductor = await CrearPersonaAsync(
+            conductorNumero, "Pedro", "Ruiz", $"pedro.ruiz{conductorNumero}@example.com", 2);
+
+        var asociacion = await _client.PostAsync("/api/conductores/vehiculos", Json(new
+        {
+            personaId = conductor.Id,
+            vehiculoIds = new[] { vehiculo.Id }
+        }));
+        asociacion.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var conConductor = await ReadAs<VehiculoDetalleDto>(
+            await _client.GetAsync($"/api/vehiculos/{vehiculo.Id}"));
+        conConductor.Conductores.Should().HaveCount(1);
+        conConductor.Conductores[0].Nombres.Should().Be("Pedro");
+
         var actualizado = await _client.PutAsync($"/api/vehiculos/{vehiculo.Id}", Json(new
         {
             placa,
@@ -265,6 +286,28 @@ public sealed class FuncionalesApiTests
     private sealed record DocumentoDto(Guid Id, string? Codigo, string? Nombre);
 
     private sealed record VehiculoCreadoDto(Guid Id);
+
+    private sealed record VehiculoDetalleDto(
+        Guid Id,
+        string? Placa,
+        List<DocumentoDetalleDto> Documentos,
+        List<ConductorDetalleDto> Conductores);
+
+    private sealed record DocumentoDetalleDto(
+        Guid DocumentoId,
+        string? NombreArchivo,
+        string? ContentType,
+        DateTime FechaExpedicion,
+        DateTime FechaVencimiento,
+        int Estado,
+        long Tamano);
+
+    private sealed record ConductorDetalleDto(
+        Guid PersonaId,
+        string? Nombres,
+        string? Apellidos,
+        DateTime FechaAsociacion,
+        int Estado);
 
     private sealed record VehiculoResumenDto(Guid Id, string? Placa, TipoVehiculo? TipoVehiculo, int? TipoServicio);
 }

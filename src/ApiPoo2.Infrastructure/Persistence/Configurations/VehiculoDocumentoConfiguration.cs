@@ -1,5 +1,6 @@
 using ApiPoo2.Infrastructure.Persistence.Converters;
 using ApiPoo2.Domain.Documentos;
+using ApiPoo2.Domain.Vehiculos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -54,8 +55,11 @@ public sealed class VehiculoDocumentoConfiguration : IEntityTypeConfiguration<Ve
         builder.Property(d => d.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("timestamptz").IsRequired();
         builder.Property(d => d.UpdatedAtUtc).HasColumnName("updated_at_utc").HasColumnType("timestamptz");
 
-        builder.HasOne<Domain.Vehiculos.Vehiculo>()
-            .WithMany()
+        // Relación declarada una sola vez: la navegación real del principal es
+        // Vehiculo.DocumentosAssociated. Declararla también en VehiculoConfiguration
+        // duplicaría la relación con una FK fantasma (VehiculoId1).
+        builder.HasOne<Vehiculo>()
+            .WithMany(v => v.DocumentosAssociated)
             .HasForeignKey(d => d.VehiculoId)
             .OnDelete(DeleteBehavior.Cascade);
 

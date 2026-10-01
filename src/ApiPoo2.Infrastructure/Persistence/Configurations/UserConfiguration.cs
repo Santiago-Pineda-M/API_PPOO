@@ -1,5 +1,4 @@
 using ApiPoo2.Domain.Personas;
-using ApiPoo2.Domain.RefreshTokens;
 using ApiPoo2.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -19,8 +18,6 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("login")
             .HasConversion(v => v.Value, v => Login.From(v))
             .HasMaxLength(64);
-
-        const string RefreshTokensKey = "RefreshTokens";
 
         builder.Property(u => u.PasswordHash)
             .HasColumnName("password_hash")
@@ -55,17 +52,11 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.UpdatedAtUtc).HasColumnName("updated_at_utc").HasColumnType("timestamptz");
 
         builder.HasIndex(u => u.ApiKey).IsUnique();
+        builder.HasIndex(u => u.Login);
         builder.HasIndex(u => new { u.IdPersona, u.ApiKey });
 
-        // RefreshToken referencia a Usuario por la clave (idpersona, login). La columna login
-        // se mapea con conversión a texto porque el value object Login no puede ser clave
-        // alternativa sin una columna física propia.
-        builder.HasMany<RefreshToken>(RefreshTokensKey)
-            .WithOne()
-            .HasForeignKey(t => new { t.UserId, t.UserLogin })
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.Navigation(RefreshTokensKey).UsePropertyAccessMode(PropertyAccessMode.Field);
-
+        // La relación con RefreshToken se declara una sola vez en RefreshTokenConfiguration,
+        // con la navegación real RefreshTokensVisibles. Declararla acá con el nombre del
+        // campo privado duplicaría la relación con una FK fantasma (UserIdPersona).
     }
 }

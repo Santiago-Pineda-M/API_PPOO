@@ -182,6 +182,54 @@ public sealed class AuthApiTests
     }
 
     [Fact]
+    public async Task Logout_RevocaRefreshToken()
+    {
+        var numero = NumeroAleatorio();
+        var credenciales = await CrearAdministrativo(numero, "Eva", "Luna");
+        var pair = await LoginAsync($"EL{numero}", credenciales.PasswordGenerada!);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(pair.AccessTokenType, pair.AccessToken);
+
+        var logout = await _client.PostAsync("/api/auth/logout", Json(new { pair.RefreshToken }));
+        logout.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var reuso = await _client.PostAsync("/api/auth/refresh", Json(new { pair.RefreshToken }));
+        reuso.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var error = await ReadAs<ErrorResponse>(reuso);
+        error.Code.Should().Be("refresh.invalid");
+    }
+
+    [Fact]
+    public async Task ChangePassword_InvalidaSesionesYPasswordAnterior()
+    {
+        var numero = NumeroAleatorio();
+        var credenciales = await CrearAdministrativo(numero, "Hugo", "Mar");
+        var pair = await LoginAsync($"HM{numero}", credenciales.PasswordGenerada!);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(pair.AccessTokenType, pair.AccessToken);
+
+        var cambio = await _client.PostAsync(
+            "/api/auth/change-password",
+            Json(new { currentPassword = credenciales.PasswordGenerada!, newPassword = "Nueva#Clave9" }));
+        cambio.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var conViejoAccess = await _client.GetAsync("/api/users/me");
+        conViejoAccess.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var conViejoRefresh = await _client.PostAsync("/api/auth/refresh", Json(new { pair.RefreshToken }));
+        conViejoRefresh.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var conViejaClave = await LoginRawAsync($"HM{numero}", credenciales.PasswordGenerada!);
+        conViejaClave.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var conNuevaClave = await LoginAsync($"HM{numero}", "Nueva#Clave9");
+        conNuevaClave.AccessToken.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
     public async Task Vehiculo_RequiresApiKeyYDocumentoObligatorio()
     {
         var numero = NumeroAleatorio();

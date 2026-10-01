@@ -1,5 +1,6 @@
 using ApiPoo2.Infrastructure.Persistence.Converters;
 using ApiPoo2.Domain.Personas;
+using ApiPoo2.Domain.Vehiculos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -29,9 +30,17 @@ public sealed class ConductorVehiculoConfiguration : IEntityTypeConfiguration<Co
             .HasMaxLength(2)
             .IsRequired();
 
-        builder.HasOne<Domain.Personas.Persona>()
+        // Ambas relaciones declaradas una sola vez, con las navegaciones reales de cada
+        // extremo. Declararlas también en VehiculoConfiguration duplicaría cada relación
+        // con FKs fantasma (PersonaId1, VehiculoId1).
+        builder.HasOne(c => c.Persona)
             .WithMany(p => p.ConductoresVehiculosAssociated)
             .HasForeignKey(c => c.PersonaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<Vehiculo>()
+            .WithMany(v => v.ConductoresAssociated)
+            .HasForeignKey(c => c.VehiculoId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(c => new { c.PersonaId, c.VehiculoId }).IsUnique();
