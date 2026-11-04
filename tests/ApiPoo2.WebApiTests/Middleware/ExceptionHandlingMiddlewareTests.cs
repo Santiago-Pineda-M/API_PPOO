@@ -5,6 +5,7 @@ using ApiPoo2.Domain.Common;
 using ApiPoo2.WebApi.Middleware;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ApiPoo2.WebApiTests.Middleware;
@@ -141,6 +142,44 @@ public sealed class ExceptionHandlingMiddlewareTests
         var body = JsonDocument.Parse(await reader.ReadToEndAsync()).RootElement;
 
         body.GetProperty("traceId").GetString().Should().Be("trace-abc-123");
+    }
+
+    [Fact]
+    public async Task RespuestaYaIniciada_NoReescribeElCuerpo()
+    {
+        var context = new DefaultHttpContext();
+        var feature = new RespuestaIniciada();
+        context.Features.Set<IHttpResponseFeature>(feature);
+
+        var middleware = new ExceptionHandlingMiddleware(
+            (_) => Task.FromException(new NotFoundException("x", "y")),
+            NullLogger<ExceptionHandlingMiddleware>.Instance);
+
+        await middleware.InvokeAsync(context);
+
+        feature.StatusCode.Should().Be(200);
+        feature.Body.Length.Should().Be(0);
+    }
+
+    private sealed class RespuestaIniciada : IHttpResponseFeature
+    {
+        public int StatusCode { get; set; } = 200;
+
+        public string? ReasonPhrase { get; set; }
+
+        public IHeaderDictionary Headers { get; set; } = new HeaderDictionary();
+
+        public Stream Body { get; set; } = new MemoryStream();
+
+        public bool HasStarted => true;
+
+        public void OnStarting(Func<object, Task> callback, object state)
+        {
+        }
+
+        public void OnCompleted(Func<object, Task> callback, object state)
+        {
+        }
     }
 
     [Fact]

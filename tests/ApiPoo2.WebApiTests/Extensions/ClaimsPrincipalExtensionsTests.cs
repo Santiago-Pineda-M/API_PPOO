@@ -42,6 +42,33 @@ public sealed class ClaimsPrincipalExtensionsTests
     }
 
     [Fact]
+    public void GetLogin_LeeElClaimName()
+    {
+        var principal = ConstruirPrincipal(("name", "rm1"));
+
+        principal.GetLogin().Should().Be("rm1");
+    }
+
+    [Fact]
+    public void GetLogin_SinClaimName_UsaElClaimNameDeIdentity()
+    {
+        var principal = ConstruirPrincipal((ClaimTypes.Name, "rm2"));
+
+        principal.GetLogin().Should().Be("rm2");
+    }
+
+    [Fact]
+    public void GetLogin_SinClaimsDeNombre_LanzaExcepcion()
+    {
+        var principal = ConstruirPrincipal(("sub", Guid.NewGuid().ToString()));
+
+        var act = () => principal.GetLogin();
+
+        var exception = act.Should().Throw<UnauthorizedAccessException>();
+        exception.Which.Message.Should().Contain("login");
+    }
+
+    [Fact]
     public void GetTokenJti_LeeElClaimJti()
     {
         var jti = Guid.NewGuid();

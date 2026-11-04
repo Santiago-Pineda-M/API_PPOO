@@ -26,4 +26,8 @@
     <ProjectReference Include="..\..\src\ApiPoo2.Infrastructure\ApiPoo2.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\docs\plantilla-trayectos.xlsx" Link="Excel\plantilla-trayectos.xlsx" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

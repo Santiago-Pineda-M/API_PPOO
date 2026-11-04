@@ -92,6 +92,19 @@ public sealed class ExcelTrayectoParserTests
             .WithMessage("*no es un Excel*");
     }
 
+    [Fact]
+    public void Parse_LaPlantillaPublicada_SeLeeConElParserReal()
+    {
+        var ruta = Path.Combine(AppContext.BaseDirectory, "Excel", "plantilla-trayectos.xlsx");
+
+        using var stream = File.OpenRead(ruta);
+        var filas = new ExcelTrayectoParser().Parse(stream, "plantilla-trayectos.xlsx");
+
+        filas.Should().HaveCount(2);
+        filas.Select(f => f.CodigoRuta).Should().OnlyContain(codigo => codigo == "RUTA-EJEMPLO");
+        filas.Select(f => f.OrdenParada).Should().Equal("0", "1");
+    }
+
     private static byte[] CrearExcel(string[] encabezados, params string[][] filas)
     {
         using var libro = new XLWorkbook();
