@@ -700,7 +700,7 @@ Estas tres se garantizan en dominio, casos de uso y pruebas.
 
 - Migraciones generadas por EF Core, sin SQL manual divergente: `InitialSchema`, `AddRutasParadasYLicencias` y `AddCargueTrayectos`.
 - `dotnet build` limpio.
-- Pruebas en verde: 379 dominio + 134 aplicación + 38 infraestructura + 14 arquitectura + 26 WebApi + 33 integración = **624/624**.
+- Pruebas en verde: 379 dominio + 134 aplicación + 39 infraestructura + 14 arquitectura + 30 WebApi + 37 integración = **633/633**.
 - Pruebas de integración contra PostgreSQL local en Docker (`api-poo2-test-db:5433`, `.env.test`), con schema aislado por ejecución; Neon reservado para producción.
 - Base de producción sin datos de prueba antes de la entrega.
 - Colección Postman con los flujos E1–E4 y los casos públicos/protegidos.

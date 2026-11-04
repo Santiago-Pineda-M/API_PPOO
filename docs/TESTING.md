@@ -146,14 +146,14 @@ dotnet test tests/ApiPoo2.DomainTests \
   /p:Threshold=90 /p:ThresholdType=line /p:ThresholdStat=total
 ```
 
-### Umbrales (gate de CI)
+### Umbrales (gate de cobertura)
 
 | Capa | Umbral mínimo | Cobertura actual |
 |---|---|---|
-| Domain | **90 %** líneas | 95.0 % |
-| Application | **30 %** líneas | 31.1 % |
-| Infrastructure | **5 %** líneas | 6.0 % |
-| WebApi | **15 %** líneas | 19.2 % |
+| Domain | **90 %** líneas | 95.9 % |
+| Application | **50 %** líneas | 54.3 % |
+| Infrastructure | **5 %** líneas | 5.0 % |
+| WebApi | **15 %** líneas | 15.4 % |
 
 `IntegrationTests` **no** entra en el gate: mide la app completa con base de
 datos y sus cifras no son comparables con las suites unitarias.
@@ -167,21 +167,22 @@ no para premiar cobertura.
 
 1. **Ratchet:** un PR nunca puede bajar el umbral de una capa. Si tu cambio
    reduce la cobertura, añade tests o justifica la excepción en el PR.
-2. **Al mejorar, sube el umbral** en el mismo PR (p. ej. Application de 30 → 35).
+2. **Al mejorar, sube el umbral** en el mismo PR (así se movió Application de 30 → 50).
 3. **Código nuevo con lógica** (entidades, casos de uso, servicios) debe venir
    con tests unitarios; los endpoints, con integración.
 4. **No se persigue un global único.** La métrica que importa es la funcional:
    cada endpoint tiene su test de integración.
-5. **Reporte:** el CI publica los `.cobertura.xml` como artefacto para
-   inspeccionar líneas sin cubrir.
+5. **Reporte:** los `.cobertura.xml` quedan en `TestResults/coverage/` al correr
+   los comandos de arriba; inspeccionalos para ver las líneas sin cubrir.
 
-## CI
+## Verificación local
 
-`.github/workflows/ci.yml` ejecuta:
+El repositorio no tiene pipeline de CI configurado, así que la verificación se
+corre a mano antes de commitear:
 
-1. `restore --locked-mode` + `build`.
-2. Suites offline + gate de cobertura por capa.
-3. Integración con un PostgreSQL 16 efímero en `:5433` y variables de entorno
-   de prueba (nunca secretos reales).
+1. `dotnet restore ApiPoo2.sln` + `dotnet build ApiPoo2.sln -c Release`.
+2. Suites offline + gate de cobertura por capa (comandos de arriba).
+3. Integración con PostgreSQL 16 local en `:5433` y `.env.test` (nunca secretos
+   reales).
 
-Para reproducirlo en local: `dotnet build ApiPoo2.sln` y los comandos de arriba.
+Con eso queda cubierto en local lo que antes hacía el pipeline.

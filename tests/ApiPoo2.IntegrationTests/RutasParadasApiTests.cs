@@ -180,6 +180,135 @@ public sealed class RutasParadasApiTests
     }
 
     [Fact]
+    public async Task Ruta_ReasignaConductorYVehiculo()
+    {
+        await AutenticarComoSemillaAsync();
+        var original = await PrepararConductorAptoAsync();
+        var reemplazo = await PrepararConductorAptoAsync();
+        var codigo = CodigoUnico();
+
+        var creacion = await _client.PostAsync("/api/rutas", Json(new
+        {
+            codigoRuta = codigo,
+            personaId = original.PersonaId,
+            vehiculoId = original.VehiculoId,
+            ubicacionInicial = "Terminal Norte",
+        }));
+        creacion.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var reasignada = await _client.PutAsync($"/api/rutas/{codigo}", Json(new
+        {
+            personaId = reemplazo.PersonaId,
+            vehiculoId = reemplazo.VehiculoId
+        }));
+
+        reasignada.StatusCode.Should().Be(HttpStatusCode.OK, await reasignada.Content.ReadAsStringAsync());
+
+        var cuerpo = await ReadAs<RutaDto>(reasignada);
+        cuerpo.CodigoRuta.Should().Be(codigo);
+        cuerpo.PersonaId.Should().Be(reemplazo.PersonaId);
+        cuerpo.VehiculoId.Should().Be(reemplazo.VehiculoId);
+        cuerpo.Placa.Should().Be(reemplazo.Placa);
+        cuerpo.Operable.Should().BeTrue();
+        cuerpo.Paradas.Should().ContainSingle(p => p.OrdenParada == 0);
+
+        var persistida = await ReadAs<RutaDto>(await _client.GetAsync($"/api/rutas/{codigo}"));
+        persistida.PersonaId.Should().Be(reemplazo.PersonaId);
+        persistida.VehiculoId.Should().Be(reemplazo.VehiculoId);
+        persistida.NumeroIdentificacionConductor.Should().Be(reemplazo.NumeroIdentificacion);
+    }
+
+    [Fact]
+    public async Task Ruta_Reasigna_RechazaParejaNoOperable()
+    {
+        await AutenticarComoSemillaAsync();
+        var original = await PrepararConductorAptoAsync();
+        var otroVehiculo = await PrepararConductorAptoAsync();
+        var codigo = CodigoUnico();
+
+        var creacion = await _client.PostAsync("/api/rutas", Json(new
+        {
+            codigoRuta = codigo,
+            personaId = original.PersonaId,
+            vehiculoId = original.VehiculoId,
+            ubicacionInicial = "Origen",
+        }));
+        creacion.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // El conductor existe con licencia vigente, pero no está asociado a este vehículo.
+        var respuesta = await _client.PutAsync($"/api/rutas/{codigo}", Json(new
+        {
+            personaId = original.PersonaId,
+            vehiculoId = otroVehiculo.VehiculoId
+        }));
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await respuesta.Content.ReadAsStringAsync()).Should().Contain("ruta.conductor.no_operable");
+    }
+
+    [Fact]
+    public async Task Ruta_Reasigna_RechazaPersonaQueNoEsConductora()
+    {
+        await AutenticarComoSemillaAsync();
+        var original = await PrepararConductorAptoAsync();
+        var codigo = CodigoUnico();
+
+        var creacion = await _client.PostAsync("/api/rutas", Json(new
+        {
+            codigoRuta = codigo,
+            personaId = original.PersonaId,
+            vehiculoId = original.VehiculoId,
+            ubicacionInicial = "Origen",
+        }));
+        creacion.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var administrativo = await CrearPersonaAsync(NumeroUnico(), "Admin", "Reasigna", 1);
+
+        var respuesta = await _client.PutAsync($"/api/rutas/{codigo}", Json(new
+        {
+            personaId = administrativo.Id,
+            vehiculoId = original.VehiculoId
+        }));
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await respuesta.Content.ReadAsStringAsync()).Should().Contain("ruta.conductor.invalido");
+
+        var sinCambios = await ReadAs<RutaDto>(await _client.GetAsync($"/api/rutas/{codigo}"));
+        sinCambios.PersonaId.Should().Be(original.PersonaId);
+    }
+
+    [Fact]
+    public async Task Ruta_Reasigna_RechazaConductorSinLicenciaVigente()
+    {
+        await AutenticarComoSemillaAsync();
+        var original = await PrepararConductorAptoAsync();
+        var sinLicencia = await PrepararConductorAptoAsync(registrarLicencia: false);
+        var codigo = CodigoUnico();
+
+        var creacion = await _client.PostAsync("/api/rutas", Json(new
+        {
+            codigoRuta = codigo,
+            personaId = original.PersonaId,
+            vehiculoId = original.VehiculoId,
+            ubicacionInicial = "Origen",
+        }));
+        creacion.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Es CONDUCTOR, pero no tiene licencia registrada.
+        var respuesta = await _client.PutAsync($"/api/rutas/{codigo}", Json(new
+        {
+            personaId = sinLicencia.PersonaId,
+            vehiculoId = sinLicencia.VehiculoId
+        }));
+
+        respuesta.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await respuesta.Content.ReadAsStringAsync()).Should().Contain("ruta.licencia.vencida");
+
+        var sinCambios = await ReadAs<RutaDto>(await _client.GetAsync($"/api/rutas/{codigo}"));
+        sinCambios.PersonaId.Should().Be(original.PersonaId);
+    }
+
+    [Fact]
     public async Task Parada_RechazaOrdenDuplicado()
     {
         await AutenticarComoSemillaAsync();
@@ -413,6 +542,10 @@ public sealed class RutasParadasApiTests
     private sealed record RutaDto(
         Guid Id,
         string CodigoRuta,
+        Guid PersonaId,
+        string NumeroIdentificacionConductor,
+        Guid VehiculoId,
+        string Placa,
         bool Operable,
         List<ParadaDto> Paradas);
 

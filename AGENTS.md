@@ -50,5 +50,5 @@
 - DomainTests cover `PasswordPolicy` and every entity invariant offline (no DB); ApplicationTests cover use-case orchestration with in-memory fakes; InfrastructureTests cover deterministic Infrastructure logic (`PasswordHasher`, `JwtTokenService`, enum converters) offline — EF repositories and migrations are covered only by IntegrationTests.
 - Domain, Application, Infrastructure and WebApi tests are fast and offline. Integration tests use the local Docker database and replay all migrations per run, so they remain the slower suite; prefer `--filter` when iterating.
 - Test names must follow `Sujeto_Comportamiento[_Detalle]` (Spanish, no `Should`); `TestNamingTests` fails the build otherwise. Every new endpoint needs an integration test.
-- Coverage gate per layer (`docs/TESTING.md`): Domain ≥ 90 %, Application ≥ 30 %, Infrastructure ≥ 5 %, WebApi ≥ 15 % lines. Ratchet: never lower a threshold; raise it when coverage improves. IntegrationTests is excluded from the gate.
-- CI (`.github/workflows/ci.yml`) runs offline suites + coverage gate + integration against an ephemeral PostgreSQL. Do not commit with a red suite.
+- Coverage gate per layer (`docs/TESTING.md`): Domain ≥ 90 %, Application ≥ 50 %, Infrastructure ≥ 5 %, WebApi ≥ 15 % lines. Ratchet: never lower a threshold; raise it when coverage improves. IntegrationTests is excluded from the gate.
+- No CI pipeline is configured in the repository: run offline suites + coverage gate + integration locally (against a local PostgreSQL for the latter). Do not commit with a red suite.

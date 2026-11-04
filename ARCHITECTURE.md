@@ -476,7 +476,7 @@ Funciones PL/pgSQL (migración `AddCargueTrayectos`): `sp_trayecto_cargue(bigint
 ## 10. Reglas de tests
 
 > Guía operativa con ejemplos, comandos y umbrales de cobertura: [`docs/TESTING.md`](docs/TESTING.md).
-> Gate de CI por capa: Domain ≥ 90 %, Application ≥ 30 %, Infrastructure ≥ 5 %, WebApi ≥ 15 % de líneas.
+> Gate de cobertura por capa (se corre en local; el repo no tiene CI configurado): Domain ≥ 90 %, Application ≥ 50 %, Infrastructure ≥ 5 %, WebApi ≥ 15 % de líneas.
 
 - **DomainTests** (offline, rápidos): entidades, value objects, invariantes y `PasswordPolicy`.
 - **ApplicationTests** (offline): orquestación de los casos de uso sin DB — validación previa, códigos de excepción y persistencia a través de `UnitOfWork` (con fakes en memoria en `Common/TestDoubles/`).

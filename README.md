@@ -245,13 +245,14 @@ dotnet test tests/ApiPoo2.DomainTests \
 | Capa | Umbral mínimo |
 |---|---|
 | Domain | 90 % líneas |
-| Application | 30 % líneas |
+| Application | 50 % líneas |
 | Infrastructure | 5 % líneas |
 | WebApi | 15 % líneas |
 
 `IntegrationTests` queda fuera del gate: cubre la app completa con PostgreSQL y
-se exige un test de integración por endpoint, no un porcentaje. El CI aplica
-estos umbrales y publica los reportes como artefacto.
+se exige un test de integración por endpoint, no un porcentaje. El gate con
+estos umbrales se corre en local (ver [`docs/TESTING.md`](docs/TESTING.md)); el
+repositorio no tiene pipeline de CI configurado.
 
 ---
 
