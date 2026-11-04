@@ -4,7 +4,7 @@ using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.Vehiculos;
 using FluentAssertions;
 
-namespace ApiPoo2.UnitTests.Domain;
+namespace ApiPoo2.DomainTests.Domain;
 
 public sealed class VehiculoTests
 {

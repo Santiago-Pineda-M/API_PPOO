@@ -3,14 +3,14 @@ using ApiPoo2.Domain.Common;
 using ApiPoo2.Domain.Personas;
 using FluentAssertions;
 
-namespace ApiPoo2.UnitTests.Domain;
+namespace ApiPoo2.DomainTests.Domain;
 
 public sealed class RefreshTokenTests
 {
     private static readonly DateTime Now = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void Issue_Should_CreateUpcomingToken()
+    public void Issue_CreaTokenVigente()
     {
         var token = RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash", Now.AddDays(1), Now);
 
@@ -21,28 +21,28 @@ public sealed class RefreshTokenTests
     }
 
     [Fact]
-    public void Issue_Should_RejectExpiryInThePast()
+    public void Issue_RechazaExpiracionEnElPasado()
     {
         var act = () => RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash", Now.AddMinutes(-1), Now);
         act.Should().Throw<DomainValidationException>().Which.Code.Should().Be("refresh.invalid");
     }
 
     [Fact]
-    public void Issue_Should_RejectLifetimeBeyondMaximum()
+    public void Issue_RechazaDuracionMayorAlMaximo()
     {
         var act = () => RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash", Now.AddDays(8), Now);
         act.Should().Throw<DomainValidationException>().Which.Code.Should().Be("refresh.invalid");
     }
 
     [Fact]
-    public void Issue_Should_RejectEmptyHash()
+    public void Issue_RechazaHashVacio()
     {
         var act = () => RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "  ", Now.AddDays(1), Now);
         act.Should().Throw<DomainValidationException>();
     }
 
     [Fact]
-    public void RotateTo_Should_ConsumeTheOpportunityTokenOnce()
+    public void RotateTo_ConsumeElTokenOportunidadUnaVez()
     {
         var token = RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash-a", Now.AddDays(1), Now);
         var replacement = RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash-b", Now.AddDays(1), Now);
@@ -58,7 +58,7 @@ public sealed class RefreshTokenTests
     }
 
     [Fact]
-    public void RotateTo_Should_ThrowOnSecondRotation()
+    public void RotateTo_LanzaExcepcionEnSegundaRotacion()
     {
         var token = RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash-a", Now.AddDays(1), Now);
         token.RotateTo(RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash-b", Now.AddDays(1), Now));
@@ -69,7 +69,7 @@ public sealed class RefreshTokenTests
     }
 
     [Fact]
-    public void Revoke_Should_BeIdempotent()
+    public void Revoke_EsIdempotente()
     {
         var token = RefreshToken.Issue(Guid.NewGuid(), Login.From("jp123"), "hash", Now.AddDays(1), Now);
 

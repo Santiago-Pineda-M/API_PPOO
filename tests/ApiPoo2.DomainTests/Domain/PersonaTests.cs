@@ -2,7 +2,7 @@ using ApiPoo2.Domain.Common;
 using ApiPoo2.Domain.Personas;
 using FluentAssertions;
 
-namespace ApiPoo2.UnitTests.Domain;
+namespace ApiPoo2.DomainTests.Domain;
 
 public sealed class PersonaTests
 {

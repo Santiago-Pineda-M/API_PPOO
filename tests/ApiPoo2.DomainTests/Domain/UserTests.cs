@@ -4,7 +4,7 @@ using ApiPoo2.Domain.RefreshTokens;
 using ApiPoo2.Domain.Users;
 using FluentAssertions;
 
-namespace ApiPoo2.UnitTests.Domain;
+namespace ApiPoo2.DomainTests.Domain;
 
 public sealed class UserTests
 {

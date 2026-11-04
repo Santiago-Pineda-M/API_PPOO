@@ -17,7 +17,7 @@ public sealed class LayerDependencyTests
         assembly.GetReferencedAssemblies().Select(a => a.Name).ToHashSet();
 
     [Fact]
-    public void Domain_Should_NotDependOnAnyOtherProjectLayer()
+    public void Domain_NoDependeDeOtraCapa()
     {
         var references = ReferencedAssemblies(typeof(User).Assembly);
 
@@ -27,7 +27,7 @@ public sealed class LayerDependencyTests
     }
 
     [Fact]
-    public void Application_Should_DependOnlyOnDomain()
+    public void Application_DependeSoloDeDomain()
     {
         var references = ReferencedAssemblies(typeof(BaseUseCase<,>).Assembly);
 
@@ -37,7 +37,7 @@ public sealed class LayerDependencyTests
     }
 
     [Fact]
-    public void Infrastructure_Should_NotDependOnWebApi()
+    public void Infrastructure_NoDependeDeWebApi()
     {
         var references = ReferencedAssemblies(typeof(AppDbContext).Assembly);
 
@@ -47,7 +47,7 @@ public sealed class LayerDependencyTests
     }
 
     [Fact]
-    public void WebApi_Should_DependOnApplicationAndInfrastructure()
+    public void WebApi_DependeDeApplicationEInfrastructure()
     {
         var webApiAssembly = typeof(ApiPoo2.WebApi.Controllers.UsersController).Assembly;
         var references = ReferencedAssemblies(webApiAssembly);

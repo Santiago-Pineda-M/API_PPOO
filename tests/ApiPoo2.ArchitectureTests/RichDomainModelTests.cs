@@ -47,7 +47,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void EntitiesOutsideBaseEntity_Should_BeExplicitlyAllowlisted()
+    public void EntidadesFueraDeBaseEntity_EstanExplicitamentePermitidas()
     {
         // Una entidad tiene identidad temporal; un value object no. Ese es el discriminador.
         var entities = typeof(BaseEntity).Assembly
@@ -73,7 +73,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void CompositeKeyEntities_Should_NotExposePublicSetters()
+    public void EntidadesConClaveCompuesta_NoExponeSettersPublicos()
     {
         var offenders = new List<string>();
 
@@ -91,7 +91,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void CompositeKeyEntities_Should_BeSealedAndBuiltByFactory()
+    public void EntidadesConClaveCompuesta_EsSelladaYSeConstruyePorFactoria()
     {
         foreach (var entity in CompositeKeyEntities)
         {
@@ -107,7 +107,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void RichEntities_Should_NotExposeMutableCollections()
+    public void EntidadesRicas_NoExponeColeccionesMutables()
     {
         var offenders = new List<string>();
 
@@ -133,7 +133,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void RichEntities_Should_ExposeBusinessMethods()
+    public void EntidadesRicas_ExponeMetodosDeNegocio()
     {
         var offenders = RichEntities()
             .Select(type => new
@@ -156,7 +156,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void RichEntities_Should_NotExposeInfrastructureDependencies()
+    public void EntidadesRicas_NoExponeDependenciasDeInfrastructure()
     {
         var offenders = new List<string>();
 
@@ -184,7 +184,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void RichEntities_Should_BeSealed()
+    public void EntidadesRicas_EsSellada()
     {
         var unsealed = RichEntities()
             .Where(t => !t.IsSealed)
@@ -197,7 +197,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void RichEntities_Should_NotExposePublicConstructors()
+    public void EntidadesRicas_NoExponeConstructoresPublicos()
     {
         var offenders = new List<string>();
 
@@ -219,7 +219,7 @@ public sealed class RichDomainModelTests
     }
 
     [Fact]
-    public void RichEntities_Should_OnlyBeInstantiatedThroughFactories()
+    public void EntidadesRicas_SoloSeInstancianPorFactorias()
     {
         var offenders = new List<string>();
 

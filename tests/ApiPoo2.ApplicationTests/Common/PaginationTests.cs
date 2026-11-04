@@ -1,7 +1,7 @@
 using ApiPoo2.Application.Common;
 using FluentAssertions;
 
-namespace ApiPoo2.Application.Tests.Common;
+namespace ApiPoo2.ApplicationTests.Common;
 
 public sealed class PaginationTests
 {

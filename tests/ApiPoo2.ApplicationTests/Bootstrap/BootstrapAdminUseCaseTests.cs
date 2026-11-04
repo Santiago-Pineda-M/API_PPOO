@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using ApiPoo2.Application.Common;
 using ApiPoo2.Application.Exceptions;
 using ApiPoo2.Application.IRepositories;
 using ApiPoo2.Application.IServices;
@@ -10,7 +11,7 @@ using FluentAssertions;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 
-namespace ApiPoo2.Application.Tests.Bootstrap;
+namespace ApiPoo2.ApplicationTests.Bootstrap;
 
 public sealed class BootstrapAdminUseCaseTests
 {
@@ -31,11 +32,12 @@ public sealed class BootstrapAdminUseCaseTests
                 "1234567890",
                 "Juan",
                 "Pérez",
-                "juan.perez@example.com"),
+                "juan.perez@example.com",
+                "Admin123!"),
             CancellationToken.None);
 
         resultado.Login.Should().Be("JP1234567890");
-        resultado.PasswordGenerada.Should().NotBeNullOrWhiteSpace();
+        resultado.PasswordGenerada.Should().Be("Admin123!");
         resultado.ApiKey.Should().NotBeNullOrWhiteSpace();
         personas.Items.Should().HaveCount(1);
         personas.Items[0].TipoPersona.Should().Be(TipoPersona.Administrativo);
@@ -64,12 +66,52 @@ public sealed class BootstrapAdminUseCaseTests
                 "999",
                 "Otro",
                 "Admin",
-                "otro@example.com"),
+                "otro@example.com",
+                "Admin123!"),
             CancellationToken.None);
 
         var exception = await act.Should().ThrowAsync<ForbiddenException>();
         exception.Which.Code.Should().Be("bootstrap.disabled");
         personas.Items.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task BaseVacia_UsaPasswordConfigurada()
+    {
+        var useCase = CrearUseCase(new PersonaRepositoryFake(), new UserRepositoryFake());
+
+        var resultado = await useCase.ExecuteAsync(
+            new BootstrapAdminInputDto(
+                TipoIdentificacion.CedulaCiudadania,
+                "1234567890",
+                "Juan",
+                "Pérez",
+                "juan.perez@example.com",
+                "Admin123!"),
+            CancellationToken.None);
+
+        resultado.PasswordGenerada.Should().Be("Admin123!");
+        var act = () => PasswordPolicy.EnsureValid(resultado.PasswordGenerada);
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public async Task PasswordDebil_RechazaConPasswordPolicy()
+    {
+        var useCase = CrearUseCase(new PersonaRepositoryFake(), new UserRepositoryFake());
+
+        var act = () => useCase.ExecuteAsync(
+            new BootstrapAdminInputDto(
+                TipoIdentificacion.CedulaCiudadania,
+                "1234567890",
+                "Juan",
+                "Pérez",
+                "juan.perez@example.com",
+                "debil"),
+            CancellationToken.None);
+
+        var exception = await act.Should().ThrowAsync<DomainValidationException>();
+        exception.Which.Code.Should().Be("password.policy");
     }
 
     [Fact]
@@ -83,7 +125,8 @@ public sealed class BootstrapAdminUseCaseTests
                 "123",
                 "Juan",
                 "Pérez",
-                "no-es-email"),
+                "no-es-email",
+                "Admin123!"),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<RequestValidationException>();
@@ -130,6 +173,21 @@ public sealed class BootstrapAdminUseCaseTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyDictionary<TipoPersona, int>>(
                 Items.GroupBy(p => p.TipoPersona).ToDictionary(g => g.Key, g => g.Count()));
+
+        public Task<(IReadOnlyList<Persona> Items, int Total)> GetPersonasConUsuarioPaginadoAsync(
+            PagedFilter filtro,
+            CancellationToken cancellationToken = default)
+        {
+            var items = Items.Where(p => p.Usuario is not null)
+                .Skip(filtro.Skip)
+                .Take(filtro.PageSize)
+                .ToList();
+            var total = Items.Count(p => p.Usuario is not null);
+            return Task.FromResult((items as IReadOnlyList<Persona>, total));
+        }
+
+        public Task<int> CountPersonasConUsuarioAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(Items.Count(p => p.Usuario is not null));
 
         public Task<bool> AnyAsync(
             Expression<Func<Persona, bool>> predicate,

@@ -289,7 +289,7 @@ public sealed class AuthApiTests
     }
 
     [Fact]
-    public async Task RevokeToken_ForUnknownPersona_Should_NotFound()
+    public async Task RevokeRefreshToken_UsuarioInexistente_DevuelveNotFound()
     {
         using var scope = _factory.Services.CreateScope();
         var useCase = scope.ServiceProvider.GetRequiredService<RevokeRefreshTokenUseCase>();

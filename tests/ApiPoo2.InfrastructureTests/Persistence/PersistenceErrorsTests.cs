@@ -4,12 +4,12 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
-namespace ApiPoo2.UnitTests.Persistence;
+namespace ApiPoo2.InfrastructureTests.Persistence;
 
 public sealed class PersistenceErrorsTests
 {
     [Fact]
-    public void IsUniqueViolation_Should_OnlyMatchPostgres23505()
+    public void PersistenceErrors_IsUniqueViolation_SoloCoincideCon23505()
     {
         PersistenceErrors.IsUniqueViolation("23505").Should().BeTrue();
         PersistenceErrors.IsUniqueViolation("23507").Should().BeFalse();
@@ -17,7 +17,7 @@ public sealed class PersistenceErrorsTests
     }
 
     [Fact]
-    public void MapUniqueViolation_Should_MapPersonaIdentificacion_ToConflict()
+    public void PersistenceErrors_MapUniqueViolation_IdentificacionGeneraConflicto()
     {
         var error = PersistenceErrors.MapUniqueViolation("personas_numero_identificacion");
 
@@ -27,7 +27,17 @@ public sealed class PersistenceErrorsTests
     }
 
     [Fact]
-    public void MapUniqueViolation_Should_MapVehiculoPlaca_ToConflict()
+    public void PersistenceErrors_MapUniqueViolation_CorreoPersonaGeneraConflicto()
+    {
+        var error = PersistenceErrors.MapUniqueViolation("IX_personas_correo_electronico");
+
+        error.Should().NotBeNull();
+        error!.Code.Should().Be("persona.correo.conflict");
+        error.Should().BeAssignableTo<ConflictException>();
+    }
+
+    [Fact]
+    public void PersistenceErrors_MapUniqueViolation_PlacaGeneraConflicto()
     {
         var error = PersistenceErrors.MapUniqueViolation("vehiculos_placa");
 
@@ -35,11 +45,11 @@ public sealed class PersistenceErrorsTests
     }
 
     [Fact]
-    public void MapUniqueViolation_Should_ReturnNull_ForOtherConstraints()
+    public void PersistenceErrors_MapUniqueViolation_OtrasConstraintsDevuelvenNulo()
         => PersistenceErrors.MapUniqueViolation("otra_restriccion").Should().BeNull();
 
     [Fact]
-    public void Map_Should_WalkInnerExceptions_ToFindConstraint()
+    public void PersistenceErrors_MapUniqueViolation_RecorreExcepcionesInternas()
     {
         var postgres = CrearPostgresUniqueViolation("personas_numero_identificacion");
 
@@ -50,7 +60,7 @@ public sealed class PersistenceErrorsTests
     }
 
     [Fact]
-    public void Map_Should_ReturnOriginal_WhenNoConstraintMatches()
+    public void PersistenceErrors_MapUniqueViolation_DevuelveOriginalSinCoincidencia()
     {
         var dbUpdate = new DbUpdateException("fallo generico");
 
