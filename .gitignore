@@ -20,6 +20,9 @@ obj/
 TestResults/
 *.coverage
 *.coveragexml
+coverage.json
+coverage.*.json
+*.cobertura.xml
 
 # OS
 Thumbs.db

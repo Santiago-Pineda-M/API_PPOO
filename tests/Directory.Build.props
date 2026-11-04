@@ -1,0 +1,13 @@
+<Project>
+
+  <!--
+    coverlet.msbuild habilita la cobertura desde la CLI:
+      dotnet test <proyecto> /p:CollectCoverage=true /p:Threshold=<n> ...
+    Las versiones viven en Directory.Packages.props (gestión centralizada).
+    Ver docs/TESTING.md para umbrales y comandos.
+  -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.msbuild" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  offline:
+    name: Build + suites offline + cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore ApiPoo2.sln
+
+      - run: dotnet build ApiPoo2.sln --no-restore -c Release
+
+      # Domain, Application, Infrastructure, WebApi y Architecture (sin Docker).
+      - name: Suites offline
+        run: >
+          dotnet test ApiPoo2.sln --no-build -c Release
+          --filter "FullyQualifiedName!~IntegrationTests"
+
+      # Gate de cobertura por capa (ver docs/TESTING.md).
+      - name: Cobertura Domain (>= 90%)
+        run: >
+          dotnet test tests/ApiPoo2.DomainTests --no-build -c Release
+          /p:CollectCoverage=true "/p:Include=[ApiPoo2.Domain]*"
+          /p:Threshold=90 /p:ThresholdType=line /p:ThresholdStat=total
+          /p:CoverletOutputFormat=cobertura
+          /p:CoverletOutput=TestResults/coverage/domain
+
+      - name: Cobertura Application (>= 30%)
+        run: >
+          dotnet test tests/ApiPoo2.ApplicationTests --no-build -c Release
+          /p:CollectCoverage=true "/p:Include=[ApiPoo2.Application]*"
+          /p:Threshold=30 /p:ThresholdType=line /p:ThresholdStat=total
+          /p:CoverletOutputFormat=cobertura
+          /p:CoverletOutput=TestResults/coverage/application
+
+      - name: Cobertura Infrastructure (>= 5%)
+        run: >
+          dotnet test tests/ApiPoo2.InfrastructureTests --no-build -c Release
+          /p:CollectCoverage=true "/p:Include=[ApiPoo2.Infrastructure]*"
+          /p:Threshold=5 /p:ThresholdType=line /p:ThresholdStat=total
+          /p:CoverletOutputFormat=cobertura
+          /p:CoverletOutput=TestResults/coverage/infrastructure
+
+      - name: Cobertura WebApi (>= 15%)
+        run: >
+          dotnet test tests/ApiPoo2.WebApiTests --no-build -c Release
+          /p:CollectCoverage=true "/p:Include=[ApiPoo2.WebApi]*"
+          /p:Threshold=15 /p:ThresholdType=line /p:ThresholdStat=total
+          /p:CoverletOutputFormat=cobertura
+          /p:CoverletOutput=TestResults/coverage/webapi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cobertura
+          path: TestResults/coverage/
+          if-no-files-found: ignore
+
+  integration:
+    name: Integración (PostgreSQL efímero)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: api_poo2_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d api_poo2_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Valores solo para CI (no son secretos de producción).
+      DATABASE_URL: postgresql://test_user:test_password@localhost:5433/api_poo2_test
+      Jwt__Secret: ci-only-secret-key-for-api-poo2-tests-32-chars
+      Jwt__Issuer: api-poo2-ci
+      Jwt__Audience: api-poo2-ci
+      Jwt__AccessTokenTtlMinutes: 15
+      Jwt__RefreshTokenTtlDays: 7
+      Bootstrap__TipoIdentificacion: 1
+      Bootstrap__NumeroIdentificacion: 1000000001
+      Bootstrap__Nombres: Root
+      Bootstrap__Apellidos: Semilla
+      Bootstrap__CorreoElectronico: root.semilla@example.com
+      Bootstrap__Password: Password123!
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore ApiPoo2.sln
+
+      - run: dotnet build ApiPoo2.sln --no-restore -c Release
+
+      - name: Tests de integración
+        run: dotnet test tests/ApiPoo2.IntegrationTests --no-build -c Release
