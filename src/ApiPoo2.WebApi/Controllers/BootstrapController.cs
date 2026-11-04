@@ -1,3 +1,4 @@
+using ApiPoo2.Application.Exceptions;
 using ApiPoo2.Application.UseCases.Bootstrap;
 using ApiPoo2.Domain.Personas;
 using Microsoft.AspNetCore.Authorization;
@@ -8,8 +9,9 @@ namespace ApiPoo2.WebApi.Controllers;
 
 /// <summary>
 ///     Arranque del sistema: crea el primer administrador a partir del archivo de configuración
-///     y devuelve sus credenciales para iniciar sesión. Solo funciona con la base vacía; una vez
-///     que existe una persona, el caso de uso responde 403.
+///     (incluida la contraseña de Bootstrap__Password) y devuelve sus credenciales para iniciar
+///     sesión. Solo funciona con la base vacía; una vez que existe una persona, el caso de uso
+///     responde 403.
 /// </summary>
 [ApiController]
 [Route("api/bootstrap")]
@@ -36,7 +38,8 @@ public sealed class BootstrapController : ControllerBase
             Requerido(seccion, nameof(BootstrapOptions.NumeroIdentificacion)),
             Requerido(seccion, nameof(BootstrapOptions.Nombres)),
             Requerido(seccion, nameof(BootstrapOptions.Apellidos)),
-            Requerido(seccion, nameof(BootstrapOptions.CorreoElectronico)));
+            Requerido(seccion, nameof(BootstrapOptions.CorreoElectronico)),
+            Requerido(seccion, nameof(BootstrapOptions.Password)));
 
         return StatusCode(
             StatusCodes.Status201Created,
@@ -49,7 +52,8 @@ public sealed class BootstrapController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(valor))
         {
-            throw new InvalidOperationException(
+            throw new InternalException(
+                "bootstrap.misconfigured",
                 $"Falta la configuración Bootstrap__{clave} en el archivo .env.");
         }
 
@@ -69,7 +73,8 @@ public sealed class BootstrapController : ControllerBase
             return tipo;
         }
 
-        throw new InvalidOperationException(
+        throw new InternalException(
+            "bootstrap.misconfigured",
             "Bootstrap__TipoIdentificacion debe ser 1-4 o uno de: CedulaCiudadania, CedulaExtranjeria, TarjetaIdentidad, Nit.");
     }
 }
@@ -88,4 +93,6 @@ public static class BootstrapOptions
     public const string Apellidos = nameof(Apellidos);
 
     public const string CorreoElectronico = nameof(CorreoElectronico);
+
+    public const string Password = nameof(Password);
 }

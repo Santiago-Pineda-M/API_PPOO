@@ -1,3 +1,4 @@
+using ApiPoo2.Domain.Common;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.Users;
 using FluentValidation;
@@ -6,7 +7,8 @@ using Microsoft.Extensions.Logging;
 namespace ApiPoo2.Application.UseCases.Bootstrap;
 
 /// <summary>
-///     Crea el primer administrador del sistema. Solo funciona cuando no existe ninguna persona:
+///     Crea el primer administrador del sistema con la contraseña definida en la configuración
+///     (Bootstrap__Password). Solo funciona cuando no existe ninguna persona:
 ///     una vez creado el primero, el endpoint queda cerrado para siempre.
 /// </summary>
 public sealed class BootstrapAdminUseCase : BaseUseCase<BootstrapAdminInputDto, BootstrapAdminOutputDto>
@@ -66,7 +68,8 @@ public sealed class BootstrapAdminUseCase : BaseUseCase<BootstrapAdminInputDto, 
             TipoPersona.Administrativo,
             now);
 
-        var passwordGenerada = GenerarPasswordTemporal();
+        var passwordGenerada = request.Password;
+        PasswordPolicy.EnsureValid(passwordGenerada);
         var sufijo = await ResolverSufijoLoginLibre(persona, cancellationToken);
 
         persona.CrearUsuario(_passwordHasher.Hash(passwordGenerada), now, sufijo);
@@ -107,7 +110,4 @@ public sealed class BootstrapAdminUseCase : BaseUseCase<BootstrapAdminInputDto, 
             "user.login.conflict",
             "No se pudo generar un login único para la persona.");
     }
-
-    private static string GenerarPasswordTemporal() =>
-        Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12));
 }

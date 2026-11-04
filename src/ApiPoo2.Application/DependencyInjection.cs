@@ -8,6 +8,12 @@ using ApiPoo2.Application.UseCases.Personas.Create;
 using ApiPoo2.Application.UseCases.Personas.Get;
 using ApiPoo2.Application.UseCases.Personas.Update;
 using ApiPoo2.Application.UseCases.Usuarios;
+using ApiPoo2.Application.UseCases.Usuarios.AsignarRol;
+using ApiPoo2.Application.UseCases.Usuarios.Crear;
+using ApiPoo2.Application.UseCases.Usuarios.Delete;
+using ApiPoo2.Application.UseCases.Usuarios.Get;
+using ApiPoo2.Application.UseCases.Usuarios.Listar;
+using ApiPoo2.Application.UseCases.Usuarios.Update;
 using ApiPoo2.Application.UseCases.Vehiculos;
 using ApiPoo2.Application.UseCases.Vehiculos.Consultas;
 using ApiPoo2.Application.UseCases.Vehiculos.Delete;
@@ -41,6 +47,12 @@ public static class DependencyInjection
         // Usuarios
         services.AddScoped<ChangeUserPasswordUseCase>();
         services.AddScoped<RegenerateApiKeyUseCase>();
+        services.AddScoped<ListarUsuariosUseCase>();
+        services.AddScoped<GetUsuarioUseCase>();
+        services.AddScoped<CrearUsuarioUseCase>();
+        services.AddScoped<UpdateUsuarioUseCase>();
+        services.AddScoped<DeleteUsuarioUseCase>();
+        services.AddScoped<AsignarRolUseCase>();
 
         // Vehiculos
         services.AddScoped<CreateVehiculoUseCase>();
@@ -79,6 +91,12 @@ public static class DependencyInjection
         services.AddScoped<IValidator<BootstrapAdminInputDto>, BootstrapAdminValidator>();
         services.AddScoped<IValidator<UpdatePersonaInputDto>, UpdatePersonaValidator>();
         services.AddScoped<IValidator<ChangeUserPasswordInputDto>, ChangeUserPasswordValidator>();
+        services.AddScoped<IValidator<ListarUsuariosInputDto>, ListarUsuariosValidator>();
+        services.AddScoped<IValidator<GetUsuarioInputDto>, GetUsuarioValidator>();
+        services.AddScoped<IValidator<CrearUsuarioInputDto>, CrearUsuarioValidator>();
+        services.AddScoped<IValidator<UpdateUsuarioInputDto>, UpdateUsuarioValidator>();
+        services.AddScoped<IValidator<DeleteUsuarioInputDto>, DeleteUsuarioValidator>();
+        services.AddScoped<IValidator<AsignarRolInputDto>, AsignarRolValidator>();
         services.AddScoped<IValidator<CreateVehiculoInputDto>, CreateVehiculoValidator>();
         services.AddScoped<IValidator<UpdateVehiculoInputDto>, UpdateVehiculoValidator>();
         services.AddScoped<IValidator<UpdateTipoDocumentoInputDto>, UpdateTipoDocumentoValidator>();

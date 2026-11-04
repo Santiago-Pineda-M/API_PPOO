@@ -7,4 +7,5 @@ public sealed record BootstrapAdminInputDto(
     string NumeroIdentificacion,
     string Nombres,
     string Apellidos,
-    string CorreoElectronico);
+    string CorreoElectronico,
+    string Password);

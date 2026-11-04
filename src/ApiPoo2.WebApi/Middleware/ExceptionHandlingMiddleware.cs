@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ApiPoo2.Application.Exceptions;
 using ApiPoo2.Domain.Common;
 
@@ -53,7 +54,6 @@ public sealed class ExceptionHandlingMiddleware
 
         context.Response.Clear();
         context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/problem+json";
 
         var body = new
         {
@@ -64,6 +64,13 @@ public sealed class ExceptionHandlingMiddleware
             traceId = context.TraceIdentifier,
         };
 
-        await context.Response.WriteAsJsonAsync(body, context.RequestAborted);
+        var json = JsonSerializer.SerializeToUtf8Bytes(body, WriteErrorJsonOptions);
+        context.Response.ContentType = "application/problem+json; charset=utf-8";
+        await context.Response.Body.WriteAsync(json, context.RequestAborted);
     }
+
+    private static readonly JsonSerializerOptions WriteErrorJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
 }

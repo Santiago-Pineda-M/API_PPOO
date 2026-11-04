@@ -1,3 +1,4 @@
+using ApiPoo2.Application.Common;
 using ApiPoo2.Domain.Personas;
 
 namespace ApiPoo2.Application.IRepositories;
@@ -21,4 +22,13 @@ public interface IPersonaRepository : IRepository<Persona>
     Task<bool> ExistsByLoginAsync(Login login, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyDictionary<TipoPersona, int>> CountByTipoAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Personas que tienen un usuario asociado, con paginación (para el listado de usuarios).
+    /// </summary>
+    Task<(IReadOnlyList<Persona> Items, int Total)> GetPersonasConUsuarioPaginadoAsync(
+        PagedFilter filtro,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountPersonasConUsuarioAsync(CancellationToken cancellationToken = default);
 }

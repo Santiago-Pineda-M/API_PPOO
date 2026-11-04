@@ -104,6 +104,27 @@ public sealed class CreatePersonaUseCase : BaseUseCase<CreatePersonaInputDto, Cr
             "No se pudo generar un login único para la persona.");
     }
 
-    private static string GenerarPasswordTemporal() =>
-        Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12));
+    private static string GenerarPasswordTemporal()
+    {
+        const string Mayusculas = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string Minusculas = "abcdefghijklmnopqrstuvwxyz";
+        const string Digitos = "0123456789";
+        const string Especiales = "!@#$%^&*-_+=?";
+        const string Alfabeto = Mayusculas + Minusculas + Digitos + Especiales;
+
+        var caracteres = new char[24];
+        caracteres[0] = Mayusculas[System.Security.Cryptography.RandomNumberGenerator.GetInt32(Mayusculas.Length)];
+        caracteres[1] = Minusculas[System.Security.Cryptography.RandomNumberGenerator.GetInt32(Minusculas.Length)];
+        caracteres[2] = Digitos[System.Security.Cryptography.RandomNumberGenerator.GetInt32(Digitos.Length)];
+        caracteres[3] = Especiales[System.Security.Cryptography.RandomNumberGenerator.GetInt32(Especiales.Length)];
+
+        for (var i = 4; i < caracteres.Length; i++)
+        {
+            caracteres[i] = Alfabeto[System.Security.Cryptography.RandomNumberGenerator.GetInt32(Alfabeto.Length)];
+        }
+
+        System.Security.Cryptography.RandomNumberGenerator.Shuffle(caracteres);
+
+        return new string(caracteres);
+    }
 }

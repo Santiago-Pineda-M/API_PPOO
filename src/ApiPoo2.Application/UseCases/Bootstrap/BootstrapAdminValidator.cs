@@ -23,5 +23,8 @@ public sealed class BootstrapAdminValidator : AbstractValidator<BootstrapAdminIn
             .NotEmpty().WithMessage("El correo electrónico es obligatorio.")
             .EmailAddress().WithMessage("El formato del correo electrónico no es válido.")
             .MaximumLength(320).WithMessage("El correo electrónico no puede superar los 320 caracteres.");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("La contraseña es obligatoria.");
     }
 }

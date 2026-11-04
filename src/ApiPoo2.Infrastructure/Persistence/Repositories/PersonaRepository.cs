@@ -1,3 +1,4 @@
+using ApiPoo2.Application.Common;
 using ApiPoo2.Application.IRepositories;
 using ApiPoo2.Domain.Personas;
 using Microsoft.EntityFrameworkCore;
@@ -45,4 +46,32 @@ public sealed class PersonaRepository : GenericRepository<Persona>, IPersonaRepo
             .GroupBy(p => p.TipoPersona)
             .Select(g => new { Tipo = g.Key, Cantidad = g.Count() })
             .ToDictionaryAsync(x => x.Tipo, x => x.Cantidad, cancellationToken);
+
+    public async Task<(IReadOnlyList<Persona> Items, int Total)> GetPersonasConUsuarioPaginadoAsync(
+        PagedFilter filtro,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbSet
+            .Include(p => p.Usuario)
+            .Where(p => p.Usuario != null)
+            .AsNoTracking();
+
+        query = filtro.Descending
+            ? query.OrderByDescending(p => p.CreatedAtUtc)
+            : query.OrderBy(p => p.CreatedAtUtc);
+
+        var items = await query
+            .Skip(filtro.Skip)
+            .Take(filtro.PageSize)
+            .ToListAsync(cancellationToken);
+
+        var total = await DbSet
+            .AsNoTracking()
+            .CountAsync(p => p.Usuario != null, cancellationToken);
+
+        return (items, total);
+    }
+
+    public Task<int> CountPersonasConUsuarioAsync(CancellationToken cancellationToken = default)
+        => DbSet.AsNoTracking().CountAsync(p => p.Usuario != null, cancellationToken);
 }

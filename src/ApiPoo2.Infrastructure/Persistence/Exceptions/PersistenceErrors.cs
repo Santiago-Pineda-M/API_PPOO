@@ -21,9 +21,11 @@ internal static class PersistenceErrors
     public static ConflictException? MapUniqueViolation(string constraintName)
         => constraintName.Contains("personas_numero_identificacion", StringComparison.Ordinal)
             ? new ConflictException("persona.identificacion.conflict", "Ya existe una persona con ese número de identificación.")
-            : constraintName.Contains("vehiculos_placa", StringComparison.Ordinal)
-                ? new ConflictException("vehiculo.placa.conflict", "Ya existe un vehículo con esa placa.")
-                : null;
+            : constraintName.Contains("personas_correo_electronico", StringComparison.Ordinal)
+                ? new ConflictException("persona.correo.conflict", "Ya existe otra persona registrada con ese correo electrónico.")
+                : constraintName.Contains("vehiculos_placa", StringComparison.Ordinal)
+                    ? new ConflictException("vehiculo.placa.conflict", "Ya existe un vehículo con esa placa.")
+                    : null;
 
     public static bool IsUniqueViolation(string? sqlState)
         => string.Equals(sqlState, PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal);

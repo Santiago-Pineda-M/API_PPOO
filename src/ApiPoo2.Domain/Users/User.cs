@@ -135,6 +135,20 @@ public sealed class User
         MarkUpdated(utcNow);
     }
 
+    /// <summary>
+    ///     Cambia el rol del usuario. Solo se usa desde el caso de uso de administración de usuarios.
+    /// </summary>
+    public void CambiarRol(UserRole nuevoRol, DateTime utcNow)
+    {
+        if (Role == nuevoRol)
+        {
+            return;
+        }
+
+        Role = nuevoRol;
+        MarkUpdated(utcNow);
+    }
+
     public void RecordLoginAttempt(bool success, DateTime utcNow)
     {
         if (IsLockedOut(utcNow))

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <InternalsVisibleTo Include="ApiPoo2.UnitTests" />
+    <InternalsVisibleTo Include="ApiPoo2.InfrastructureTests" />
   </ItemGroup>
 
   <ItemGroup>
