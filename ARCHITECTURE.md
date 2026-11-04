@@ -70,7 +70,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 - **Use cases** por feature en `UseCases/<Feature>/<Caso>/`, heredando `BaseUseCase<TRequest, TResult>` (valida con FluentValidation y loguea inicio/fin). **NO CQRS, NO MediatR, NO Dispatcher.**
 - **Validators** FluentValidation (uno por use case que lo requiera, junto al use case).
 - **DTOs** de entrada/salida junto al caso de uso que los produce — ver convenciones en §6.
-- **Excepciones de aplicación**: `BaseApplicationException` y subclases (`UnauthorizedException`, `NotFoundException`, `ConflictException`, `ForbiddenException`, `RequestValidationException`) con `code` estable.
+- **Excepciones de aplicación**: `BaseApplicationException` y subclases (`UnauthorizedException`, `NotFoundException`, `ConflictException`, `ForbiddenException`, `RequestValidationException`, `InternalException`) con `code` estable.
 - **Puertos (interfaces)**: `IRepositories/` (`IRepository<T>`, `IPersonaRepository`, `IUserRepository`, `IVehiculoRepository`, `ITipoDocumentoRepository`, `IConductorVehiculoRepository`, `IRefreshTokenRepository`, `IBlacklistedTokenRepository`, `IUnitOfWork`) e `IServices/` (`IPasswordHasher`, `IJwtTokenService`, `IJwtTokenBlacklistService`, `IDateTimeProvider`, `JwtOptions`).
 - `DependencyInjection.AddApplication()` registra **explícitamente** use cases y validators (`AddScoped`), sin reflection.
 
@@ -109,7 +109,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 - **Composición root**: `Program.cs` (`public partial class Program`), registro de ambas capas inferiores y middleware.
 - **Controllers**: endpoints REST. Inyectan use cases concretos por constructor (uno por endpoint) y bindean los `InputDto` de Application como `[FromBody]` o los arman con valores de ruta/claims.
 - **Seguridad dual**: JWT autentica; la policy `ApiKey` exige además `X-Api-Key` y que pertenezca al usuario autenticado. Los endpoints de escritura de E1/E2 la requieren; las consultas públicas usan `[AllowAnonymous]`.
-- **Bootstrap**: `POST /api/bootstrap/admin` (público) crea el primer administrativo desde `Bootstrap__*` del `.env`; solo funciona con base vacía (`403 bootstrap.disabled` en otro caso).
+- **Bootstrap**: `POST /api/bootstrap/admin` (público) crea el primer administrativo desde `Bootstrap__*` del `.env`; solo funciona con base vacía (`403 bootstrap.disabled` en otro caso, `500 bootstrap.misconfigured` si falta config).
 - **CORS**: política `Frontend` con orígenes de `Cors__AllowedOrigins` (coma-separados); va antes de auth en el pipeline.
 - **Salud**: `GET /health` (público) con chequeo real a PostgreSQL vía `DatabaseHealthCheck`, sin paquetes extra.
 - **Extensiones de claims**: `GetPersonaId()`, `GetTokenJti()`, `GetTokenExpiresAtUtc()` fabrican campos derivados del access token (nunca vienen del body del cliente).
@@ -170,10 +170,12 @@ ApiPoo2.sln
 │       ├── Middleware/       ExceptionHandlingMiddleware
 │       └── Program.cs
 └── tests/
-    ├── ApiPoo2.UnitTests/          Domain/, Persistence/
-    ├── ApiPoo2.Application.Tests/  Common/ (Pagination, PasswordPolicy), Bootstrap/
-    ├── ApiPoo2.ArchitectureTests/  LayerDependencyTests, RichDomainModelTests
-    └── ApiPoo2.IntegrationTests/   ApiFactory, ApiCollection, AuthApiTests, FuncionalesApiTests
+    ├── ApiPoo2.DomainTests/          Domain/, PasswordPolicy (entidades, value objects, invariantes)
+    ├── ApiPoo2.ApplicationTests/    Common/ — Pagination, TestDoubles (fakes); Bootstrap/, Consultas/, Conductores/, TiposDocumento/, Usuarios/
+    ├── ApiPoo2.InfrastructureTests/  Security/ (PasswordHasher, JwtTokenService), Persistence/ (PersistenceErrors, Converters), Common/ (DateTimeProvider)
+    ├── ApiPoo2.WebApiTests/          Auth/ (ApiKeyHandler), Middleware/ (ExceptionHandling), Extensions/ (Claims)
+    ├── ApiPoo2.ArchitectureTests/    LayerDependencyTests, RichDomainModelTests, TestNamingTests
+    └── ApiPoo2.IntegrationTests/     ApiFactory, ApiCollection, AuthApiTests, FuncionalesApiTests
 ```
 
 ---
@@ -212,6 +214,7 @@ ApiPoo2.sln
 | Migración | `<timestamp>_<Nombre>` generado por EF | `20260918041507_AddRefreshTokenConcurrency` |
 | Exception de dominio | `<Algo>Exception` en `Exceptions/` | `DomainValidationException` |
 | Excepción de app | `<Status>Exception` | `NotFoundException`, `ConflictException` |
+| Test method | `Sujeto_Comportamiento[_Detalle]` (español, sin segmento `Should`) | `From_RechazaVacio`, `CambiarEstado_CambiaYMarcaActualizado`, `PersonasPorTipo_IncluyeTodosLosTiposInclusoEnCero` |
 
 ---
 
@@ -238,7 +241,7 @@ Formato de respuesta de error (middleware): `application/problem+json`
 | Código | HTTP | Origen |
 |---|---|---|
 | `persona.identificacion.conflict` | 409 | `CreatePersonaUseCase` (chequeo previo) o mapeo de unique violation (`PersistenceErrors`, condición de carrera) |
-| `persona.correo.conflict` | 409 | `UpdatePersonaUseCase` (correo ya usado por otra persona) |
+| `persona.correo.conflict` | 409 | `UpdatePersonaUseCase` (chequeo previo) o mapeo de unique violation (`PersistenceErrors`, condición de carrera) |
 | `vehiculo.placa.conflict` | 409 | `CreateVehiculoUseCase`/`UpdateVehiculoUseCase` (chequeo previo) o mapeo de unique violation |
 | `user.login.conflict` | 409 | no se pudo generar un login mnemotécnico único |
 | `password.policy` | 400 | `PasswordPolicy.EnsureValid` |
@@ -252,12 +255,13 @@ Formato de respuesta de error (middleware): `application/problem+json`
 | `person.not_found` | 404 | persona inexistente |
 | `vehicle.not_found` | 404 | vehículo inexistente |
 | `document.not_found` | 404 | documento paramétrico inexistente |
+| `bootstrap.misconfigured` | 500 | `BootstrapController` (`Bootstrap__*` ausente o inválido en el `.env`) |
 | `internal.error` | 500 | error no controlado |
 
 Reglas:
 
 - Cada excepción lleva `code` **estable** (los tests de integración lo asertan) y mensaje en español.
-- `persona.identificacion.conflict`, `vehiculo.placa.conflict` y `refresh.reuse` tienen **doble origen** (chequeo del use case + mapeo de persistencia); no cambiar el código al agregar rutas nuevas.
+- `persona.identificacion.conflict`, `persona.correo.conflict`, `vehiculo.placa.conflict` y `refresh.reuse` tienen **doble origen** (chequeo del use case + mapeo de persistencia); no cambiar el código al agregar rutas nuevas.
 - Extender `PersistenceErrors` al agregar índices únicos nuevos, mapeando `constraintName` → código.
 
 ---
@@ -396,9 +400,14 @@ Reglas:
 
 ## 10. Reglas de tests
 
-- **UnitTests** (offline, rápidos): entidades, value objects y `PasswordPolicy`.
-- **ApplicationTests** (offline): comportamiento de la capa Application sin DB — `PasswordPolicy` (la política que la entidad no puede imponer), paginación y bootstrap del primer admin (con repositorios falsos en memoria).
-- **ArchitectureTests** (offline): refs de capas + invariantes del modelo rico (`RichDomainModelTests`: entidades `sealed`, sin constructores públicos, sin setters públicos, construidas solo por factorías).
+> Guía operativa con ejemplos, comandos y umbrales de cobertura: [`docs/TESTING.md`](docs/TESTING.md).
+> Gate de CI por capa: Domain ≥ 90 %, Application ≥ 30 %, Infrastructure ≥ 5 %, WebApi ≥ 15 % de líneas.
+
+- **DomainTests** (offline, rápidos): entidades, value objects, invariantes y `PasswordPolicy`.
+- **ApplicationTests** (offline): orquestación de los casos de uso sin DB — validación previa, códigos de excepción y persistencia a través de `UnitOfWork` (con fakes en memoria en `Common/TestDoubles/`).
+- **InfrastructureTests** (offline): lógica determinista de Infrastructure sin I/O — `PasswordHasher`, `JwtTokenService`, converters de códigos, `DateTimeProvider`; los repositorios y migraciones se prueban solo en IntegrationTests.
+- **WebApiTests** (offline): piezas de WebApi aislables sin servidor HTTP — `ApiKeyHandler`, `ExceptionHandlingMiddleware`, `ClaimsPrincipalExtensions`; los controllers se prueban solo en IntegrationTests.
+- **ArchitectureTests** (offline): refs de capas + invariantes del modelo rico (`RichDomainModelTests`: entidades `sealed`, sin constructores públicos, sin setters públicos, construidas solo por factorías) + estándar de nombres (`TestNamingTests`: `Sujeto_Comportamiento[_Detalle]`, sin `Should`).
 - **IntegrationTests** (requieren Docker local `api_poo2-test-db:5433` y red local): `WebApplicationFactory<Program>`. Usan identificaciones/placas/códigos únicos; preferir `--filter` al iterar.
   - **Aislamiento por ejecución**: `ApiFactory` crea un schema propio (`test_<guid>`) inyectándolo como `Search Path` en la cadena de conexión, reproduce todas las migraciones ahí, siembra un administrativo mínimo y lo borra con `CASCADE` al terminar. Las ejecuciones no tocan las tablas de `public` ni dejan residuos. Neon queda reservado para producción.
 - Flujo a seguir al escribir un test
