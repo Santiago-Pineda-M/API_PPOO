@@ -6,7 +6,12 @@ using ApiPoo2.Application.IServices;
 using ApiPoo2.Domain.BlacklistedTokens;
 using ApiPoo2.Domain.RefreshTokens;
 using ApiPoo2.Domain.Users;
+using ApiPoo2.Infrastructure.BackgroundServices;
+using ApiPoo2.Infrastructure.Excel;
+using ApiPoo2.Infrastructure.Geocoding;
+using ApiPoo2.Infrastructure.Notifications;
 using ApiPoo2.Infrastructure.Persistence;
+using ApiPoo2.Infrastructure.Persistence.Procedures;
 using ApiPoo2.Infrastructure.Persistence.Repositories;
 using ApiPoo2.Infrastructure.Security;
 using ApiPoo2.Infrastructure.Common;
@@ -14,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ApiPoo2.Infrastructure;
@@ -23,7 +29,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddPersistence(configuration);
-        services.AddServices();
+        services.AddServices(configuration);
         services.AddAuth(configuration);
 
         return services;
@@ -50,12 +56,14 @@ public static class DependencyInjection
         services.AddScoped<IConductorVehiculoRepository, ConductorVehiculoRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IBlacklistedTokenRepository, BlacklistedTokenRepository>();
+        services.AddScoped<IRutaRepository, RutaRepository>();
+        services.AddScoped<ITrayectoTemporalRepository, TrayectoTemporalRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
 
-    private static IServiceCollection AddServices(this IServiceCollection services)
+    private static IServiceCollection AddServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
@@ -64,7 +72,22 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddScoped<IJwtTokenBlacklistService, JwtTokenBlacklistService>();
 
+        // Geocodificación: opciones configurables y cliente HTTP con el adaptador de Nominatim.
+        services.Configure<GeocodingOptions>(configuration.GetSection(GeocodingOptions.SectionName));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<GeocodingOptions>>().Value);
+        services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
+
+        // Cargue masivo E4.
+        services.Configure<CargueOptions>(configuration.GetSection(CargueOptions.SectionName));
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<CargueOptions>>().Value);
+        services.AddScoped<IExcelTrayectoParser, ExcelTrayectoParser>();
+        services.AddScoped<ICargueTrayectosProcedures, CargueTrayectosProcedures>();
+        services.AddScoped<IEmailNotifier, LoggingEmailNotifier>();
+
         services.AddHostedService<TokenCleanupBackgroundService>();
+        services.AddHostedService<ExpirarLicenciasBackgroundService>();
+        services.AddHostedService<DocumentosVencidosBackgroundService>();
+        services.AddHostedService<GeocodificacionBackgroundService>();
 
         return services;
     }

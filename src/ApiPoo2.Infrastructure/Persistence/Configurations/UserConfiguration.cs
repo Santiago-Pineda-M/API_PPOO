@@ -52,7 +52,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.UpdatedAtUtc).HasColumnName("updated_at_utc").HasColumnType("timestamptz");
 
         builder.HasIndex(u => u.ApiKey).IsUnique();
-        builder.HasIndex(u => u.Login);
+        builder.HasIndex(u => u.Login).IsUnique();
         builder.HasIndex(u => new { u.IdPersona, u.ApiKey });
 
         // La relación con RefreshToken se declara una sola vez en RefreshTokenConfiguration,

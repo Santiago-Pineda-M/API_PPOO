@@ -66,4 +66,16 @@ public sealed class ConductorVehiculo : BaseEntity
     }
 
     public bool PuedeOperar() => Estado == EstadoConductor.Po;
+
+    /// <summary>La tarea programada restringe al conductor cuando su licencia vence.</summary>
+    public void Restringir(DateTime utcNow)
+    {
+        if (Estado == EstadoConductor.Ro)
+        {
+            return;
+        }
+
+        Estado = EstadoConductor.Ro;
+        MarkUpdated(utcNow);
+    }
 }

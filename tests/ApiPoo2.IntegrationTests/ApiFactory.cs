@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -38,6 +39,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         });
         builder.ConfigureServices(services =>
         {
+            // Las tareas programadas (geocodificación, expiración de licencias y de documentos) no
+            // corren en las pruebas: llamarían a servicios externos y competirían con los datos que
+            // cada prueba prepara. El plan las deshabilita en el entorno de integración.
+            services.RemoveAll<IHostedService>();
+
             var connectionString = BuildIsolatedConnectionString();
 
             services.RemoveAll<AppDbContext>();

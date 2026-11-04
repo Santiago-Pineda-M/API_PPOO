@@ -36,4 +36,12 @@ public sealed class VehiculoRepository : GenericRepository<Vehiculo>, IVehiculoR
             .Include(v => v.ConductoresAssociated).ThenInclude(c => c.Persona)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Vehiculo>> GetAllWithDetailsForUpdateAsync(
+        CancellationToken cancellationToken = default)
+        => await DbSet
+            .Include(v => v.DocumentosAssociated)
+            .Include(v => v.ConductoresAssociated).ThenInclude(c => c.Persona)
+            .AsSplitQuery()
+            .ToListAsync(cancellationToken);
 }

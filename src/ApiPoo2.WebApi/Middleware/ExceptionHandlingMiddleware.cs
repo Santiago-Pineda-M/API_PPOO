@@ -23,7 +23,12 @@ public sealed class ExceptionHandlingMiddleware
         }
         catch (BaseApplicationException ex)
         {
-            await WriteErrorAsync(context, ex.HttpStatusCode, ex.Code, ex.Message, (ex as RequestValidationException)?.Errors);
+            await WriteErrorAsync(
+                context,
+                ex.HttpStatusCode,
+                ex.Code,
+                ex.Message,
+                (ex as RequestValidationException)?.Errors ?? (ex as BadRequestException)?.Errors);
         }
         catch (DomainValidationException ex)
         {

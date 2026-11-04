@@ -189,6 +189,11 @@ public sealed class BootstrapAdminUseCaseTests
         public Task<int> CountPersonasConUsuarioAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(Items.Count(p => p.Usuario is not null));
 
+        public Task<IReadOnlyList<Persona>> GetConLicenciaVencidaAsync(
+            DateTime utcNow,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Persona>>([]);
+
         public Task<bool> AnyAsync(
             Expression<Func<Persona, bool>> predicate,
             CancellationToken cancellationToken = default)

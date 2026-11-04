@@ -45,8 +45,8 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 
 **Responsabilidades**
 
-- Entidades por agregado: `Persona` + `ConductorVehiculo`, `Vehiculo`, `TipoDocumento` + `DocumentoVehiculo`, `User`, `RefreshToken`, `BlacklistedToken`.
-- Value Objects: `NumeroIdentificacion`, `Nombres`, `Apellidos`, `CorreoElectronico`, `Login`, `ApiKey`, `Placa`, `Color`, `Marca`, `Linea`, `DocumentoCodigo`, `DocumentoNombre`, `DocumentoDescripcion`, `NombreArchivo`, `ContenidoDocumento`, `PasswordHash`.
+- Entidades por agregado: `Persona` + `ConductorVehiculo`, `Vehiculo`, `TipoDocumento` + `DocumentoVehiculo`, `Ruta` + `Parada`, `TrayectoTemporal` (staging E4), `User`, `RefreshToken`, `BlacklistedToken`.
+- Value Objects: `NumeroIdentificacion`, `Nombres`, `Apellidos`, `CorreoElectronico`, `Login`, `ApiKey`, `Placa`, `Color`, `Marca`, `Linea`, `DocumentoCodigo`, `DocumentoNombre`, `DocumentoDescripcion`, `NombreArchivo`, `ContenidoDocumento`, `PasswordHash`, `LicenciaConduccion`, `FechaVigenciaLicencia`, `CodigoRuta`, `UbicacionParada`, `LoginUsuario`.
 - Enums: `TipoIdentificacion`, `TipoPersona`, `EstadoConductor`, `TipoVehiculo`, `TipoServicio`, `TipoCombustible`, `TiposVehiculoAplicables`, `CodigoObligatoriedad`, `EstadoDocumento`, `UserRole`, `RevocationReason`.
 - Sin eventos de dominio: se eliminaron por ser código muerto.
 - Reglas de negocio e invariantes (aquí vive la única fuente de verdad):
@@ -54,6 +54,10 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
   - `User.MaxFailedAccessAttempts = 5`, `User.DefaultLockoutDuration = 15 min`.
   - `User.MaxActiveRefreshTokens = 10` (al emitir el número 11, se revoca el más antiguo con `SessionLimitReached`).
   - `RefreshToken.MaxLifetime = 7 días` (`RefreshToken.Issue` rechaza TTL mayores).
+  - `ReglasParada`: orden 0–6, máximo 7 paradas, 0 es la inicial y el mayor la final.
+  - `Ruta`: parada inicial obligatoria, orden único, reasignación validada, coordenadas ambas o ninguna.
+  - `Persona`: licencia de conducción opcional (bytes + vigencia) solo para `CONDUCTOR`; `LicenciaVigente`.
+  - `DocumentoVehiculo.MarcarVencido` persiste `VENCIDO`; `ConductorVehiculo.Restringir` fuerza `RO` (idempotente).
 - Excepciones de dominio: `DomainException`, `DomainValidationException` (con `code` + errores).
 
 **Reglas / limitaciones**
@@ -71,7 +75,8 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 - **Validators** FluentValidation (uno por use case que lo requiera, junto al use case).
 - **DTOs** de entrada/salida junto al caso de uso que los produce — ver convenciones en §6.
 - **Excepciones de aplicación**: `BaseApplicationException` y subclases (`UnauthorizedException`, `NotFoundException`, `ConflictException`, `ForbiddenException`, `RequestValidationException`, `InternalException`) con `code` estable.
-- **Puertos (interfaces)**: `IRepositories/` (`IRepository<T>`, `IPersonaRepository`, `IUserRepository`, `IVehiculoRepository`, `ITipoDocumentoRepository`, `IConductorVehiculoRepository`, `IRefreshTokenRepository`, `IBlacklistedTokenRepository`, `IUnitOfWork`) e `IServices/` (`IPasswordHasher`, `IJwtTokenService`, `IJwtTokenBlacklistService`, `IDateTimeProvider`, `JwtOptions`).
+- **Puertos (interfaces)**: `IRepositories/` (`IRepository<T>`, `IPersonaRepository`, `IUserRepository`, `IVehiculoRepository`, `ITipoDocumentoRepository`, `IConductorVehiculoRepository`, `IRutaRepository`, `ITrayectoTemporalRepository`, `IRefreshTokenRepository`, `IBlacklistedTokenRepository`, `IUnitOfWork`) e `IServices/` (`IPasswordHasher`, `IJwtTokenService`, `IJwtTokenBlacklistService`, `IDateTimeProvider`, `IGeocodingService`, `IExcelTrayectoParser`, `ICargueTrayectosProcedures`, `IEmailNotifier`, `JwtOptions`, `GeocodingOptions`, `CargueOptions`).
+- **Casos de uso E3/E4**: CRUD de `Rutas` y `Paradas`, licencia de conductor, `Cargues` (cargue/listado/detalle/purga) y jobs de `Trayectos` (expiración de licencias, documentos vencidos, geocodificación).
 - `DependencyInjection.AddApplication()` registra **explícitamente** use cases y validators (`AddScoped`), sin reflection.
 
 **Reglas / limitaciones**
@@ -90,7 +95,8 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 - **Persistence** EF Core/Npgsql: `AppDbContext`, `Configurations/` (mapeos snake_case), `Repositories/` (implementaciones), `Migrations/`.
 - **Mapeo de errores de persistencia**: `Persistence/Exceptions/PersistenceErrors.cs` traduce violaciones de esquema a excepciones de aplicación (ver §7).
 - **Servicios**: `PasswordHasher` (BCrypt), `JwtTokenService` (emisión/validación de JWT + hash de refresh), `JwtTokenBlacklistService` (cache en memoria + tabla `access_token_blacklist`), `DateTimeProvider`.
-- **Background service**: `TokenCleanupBackgroundService` (purga de blacklist expirada).
+- **E3/E4**: `Excel/ExcelTrayectoParser` (solo extracción de celdas con ClosedXML), `Geocoding/NominatimGeocodingService` (`HttpClient` + `IMemoryCache`), `Notifications/LoggingEmailNotifier` (correo CEREZA opcional por log) y `Persistence/Procedures/CargueTrayectosProcedures` (invoca los tres SP en una transacción).
+- **Background services**: `TokenCleanupBackgroundService` (purga de blacklist expirada), `ExpirarLicenciasBackgroundService` (conductor a `RO`), `DocumentosVencidosBackgroundService` (persiste `VENCIDO`) y `GeocodificacionBackgroundService` (paradas sin coordenadas, cada 90 s).
 - **Carga de configuración**: `EnvFileLoader` lee `.env` en producción y `.env.test` en pruebas; `JwtOptions` vive en `Application/IServices`.
 - `DependencyInjection.AddInfrastructure()` arma `AddPersistence` + `AddServices` + `AddAuth`.
 
@@ -107,7 +113,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
 **Responsabilidades**
 
 - **Composición root**: `Program.cs` (`public partial class Program`), registro de ambas capas inferiores y middleware.
-- **Controllers**: endpoints REST. Inyectan use cases concretos por constructor (uno por endpoint) y bindean los `InputDto` de Application como `[FromBody]` o los arman con valores de ruta/claims.
+- **Controllers**: endpoints REST (`Auth`, `Personas` —incluida la subruta de licencia—, `Usuarios`, `Vehiculos`, `TiposDocumento`, `Conductores`, `Users`, `Bootstrap`, `Rutas`, `Paradas`, `Cargues`). Inyectan use cases concretos por constructor (uno por endpoint) y bindean los `InputDto` de Application como `[FromBody]` o los arman con valores de ruta/claims.
 - **Seguridad dual**: JWT autentica; la policy `ApiKey` exige además `X-Api-Key` y que pertenezca al usuario autenticado. Los endpoints de escritura de E1/E2 la requieren; las consultas públicas usan `[AllowAnonymous]`.
 - **Bootstrap**: `POST /api/bootstrap/admin` (público) crea el primer administrativo desde `Bootstrap__*` del `.env`; solo funciona con base vacía (`403 bootstrap.disabled` en otro caso, `500 bootstrap.misconfigured` si falta config).
 - **CORS**: política `Frontend` con orígenes de `Cors__AllowedOrigins` (coma-separados); va antes de auth en el pipeline.
@@ -136,6 +142,8 @@ ApiPoo2.sln
 │   │   ├── Personas/         Persona, ConductorVehiculo, Login, ApiKey, identificaciones y tipos
 │   │   ├── Vehiculos/        Vehiculo, Placa, Color, Marca, Linea y tipos
 │   │   ├── TiposDocumento/   TipoDocumento, DocumentoVehiculo y contenido
+│   │   ├── Rutas/            Ruta (agregado), Parada, CodigoRuta, UbicacionParada, LoginUsuario, ReglasParada
+│   │   ├── Trayectos/        TrayectoTemporal (staging E4), EstadoTrayectoTemporal
 │   │   ├── RefreshTokens/    RefreshToken, RevocationReason
 │   │   ├── BlacklistedTokens/ BlacklistedToken
 │   │   └── Common/           BaseEntity, PasswordPolicy, DomainException, DomainValidationException
@@ -155,16 +163,21 @@ ApiPoo2.sln
 │   │   │   ├── AppDbContext.cs
 │   │   │   ├── Configurations/      <Entidad>Configuration.cs y converters
 │   │   │   ├── Exceptions/          PersistenceErrors.cs
-│   │   │   ├── Migrations/          InitialSchema única (aplanada)
+│   │   │   ├── Migrations/          InitialSchema, AddRutasParadasYLicencias, AddCargueTrayectos (SP)
+│   │   │   ├── Procedures/          CargueTrayectosProcedures.cs (invoca los tres SP)
 │   │   │   ├── Repositories/        GenericRepository.cs, <Entidad>Repository.cs, UnitOfWork.cs
 │   │   │   └── DesignTimeDbContextFactory.cs
-│   │   ├── Security/         PasswordHasher, JwtTokenService, JwtTokenBlacklistService, TokenCleanupBackgroundService
+│   │   ├── Security/         PasswordHasher, JwtTokenService, JwtTokenBlacklistService
+│   │   ├── Excel/            ExcelTrayectoParser (ClosedXML, solo celdas)
+│   │   ├── Geocoding/        NominatimGeocodingService
+│   │   ├── Notifications/    LoggingEmailNotifier (CEREZA opcional)
+│   │   ├── BackgroundServices/ TokenCleanup, ExpirarLicencias, DocumentosVencidos, Geocodificacion
 │   │   ├── Common/           DateTimeProvider
 │   │   ├── Persistence/EnvFileLoader.cs
 │   │   └── DependencyInjection.cs
 │   └── ApiPoo2.WebApi/
 │       ├── Auth/             ApiKeyRequirement, ApiKeyHandler
-│       ├── Controllers/      AuthController, PersonasController, UsuariosController, VehiculosController, TiposDocumentoController, ConductoresController, UsersController, BootstrapController
+│       ├── Controllers/      AuthController, PersonasController (licencia), UsuariosController, VehiculosController, TiposDocumentoController, ConductoresController, UsersController, BootstrapController, RutasController, ParadasController, CarguesController
 │       ├── Extensions/       ClaimsPrincipalExtensions, SwaggerExtensions
 │       ├── Health/           DatabaseHealthCheck
 │       ├── Middleware/       ExceptionHandlingMiddleware
@@ -172,10 +185,10 @@ ApiPoo2.sln
 └── tests/
     ├── ApiPoo2.DomainTests/          Domain/, PasswordPolicy (entidades, value objects, invariantes)
     ├── ApiPoo2.ApplicationTests/    Common/ — Pagination, TestDoubles (fakes); Bootstrap/, Consultas/, Conductores/, TiposDocumento/, Usuarios/
-    ├── ApiPoo2.InfrastructureTests/  Security/ (PasswordHasher, JwtTokenService), Persistence/ (PersistenceErrors, Converters), Common/ (DateTimeProvider)
+    ├── ApiPoo2.InfrastructureTests/  Security/ (PasswordHasher, JwtTokenService), Persistence/ (PersistenceErrors, Converters), Common/ (DateTimeProvider), Excel/ (parser), Geocoding/ (Nominatim con handler falso)
     ├── ApiPoo2.WebApiTests/          Auth/ (ApiKeyHandler), Middleware/ (ExceptionHandling), Extensions/ (Claims)
     ├── ApiPoo2.ArchitectureTests/    LayerDependencyTests, RichDomainModelTests, TestNamingTests
-    └── ApiPoo2.IntegrationTests/     ApiFactory, ApiCollection, AuthApiTests, FuncionalesApiTests
+    └── ApiPoo2.IntegrationTests/     ApiFactory, ApiCollection, AuthApiTests, FuncionalesApiTests, UsuariosApiTests, RutasParadasApiTests, LicenciaConductorApiTests, CarguesApiTests
 ```
 
 ---
@@ -255,6 +268,24 @@ Formato de respuesta de error (middleware): `application/problem+json`
 | `person.not_found` | 404 | persona inexistente |
 | `vehicle.not_found` | 404 | vehículo inexistente |
 | `document.not_found` | 404 | documento paramétrico inexistente |
+| `ruta.codigo.conflict` | 409 | `CreateRutaUseCase` (código único) |
+| `ruta.not_found` | 404 | ruta inexistente |
+| `ruta.conductor.invalido` | 403 | la persona no es `CONDUCTOR` |
+| `ruta.conductor.no_operable` | 409 | asociación ausente o en estado distinto de `PO` |
+| `ruta.documentos.no_habilitados` | 409 | vehículo sin documentos habilitados y vigentes |
+| `ruta.licencia.vencida` | 409 | conductor sin licencia vigente |
+| `parada.not_found` | 404 | parada inexistente |
+| `parada.orden.duplicado` | 409 | ya hay una parada con ese orden |
+| `parada.maximo` | 409 | la ruta ya tiene 7 paradas |
+| `parada.inicial.requerida` | 409 | se intentó borrar la parada inicial |
+| `parada.coordenadas` | 400 | coordenadas incompletas o fuera de rango |
+| `persona.licencia.not_found` | 404 | persona sin licencia registrada |
+| `persona.licencia.tipo_persona` | 403 | licencia en persona que no es `CONDUCTOR` |
+| `cargue.archivo.formato` | 400 | archivo no `.xlsx`, ilegible o sin columnas obligatorias |
+| `cargue.archivo.vacio` | 400 | archivo vacío o sin filas |
+| `cargue.columnas.invalidas` | 400 | filas con orden, coordenadas o coherencia por ruta inválidos |
+| `cargue.duplicado` | 409 | ya existe un cargue en el mismo minuto |
+| `cargue.not_found` | 404 | `idCargue` inexistente |
 | `bootstrap.misconfigured` | 500 | `BootstrapController` (`Bootstrap__*` ausente o inválido en el `.env`) |
 | `internal.error` | 500 | error no controlado |
 
@@ -281,6 +312,8 @@ Reglas:
 | `apellidos` | varchar(100) | |
 | `correo_electronico` | varchar(320) | **único**, formato + CHECK |
 | `tipo_persona` | varchar | `ADMINISTRATIVO/CONDUCTOR` + CHECK |
+| `licencia_conduccion` | `bytea?` | PDF binario; CHECK par con la vigencia, no vacío y solo `CONDUCTOR` |
+| `fecha_vigencia_licencia` | timestamptz? | CHECK par con el contenido |
 | `created_at_utc` / `updated_at_utc` | timestamptz | |
 
 **`usuarios`**
@@ -288,7 +321,7 @@ Reglas:
 | Columna | Tipo | Nota |
 |---|---|---|
 | `id_persona` | uuid (PK, FK→personas, cascade) | parte 1 de la PK compuesta |
-| `login` | varchar(64) (PK) | mnemotécnico, parte 2 de la PK compuesta |
+| `login` | varchar(64) (PK) | mnemotécnico, parte 2 de la PK compuesta; **único** (FK desde `rutas.login_usuario`) |
 | `password_hash` / `password_hash_algorithm` | varchar | BCrypt; nunca en claro |
 | `api_key` | varchar | **único**, autogenerada |
 | `role` | varchar(20) | string del enum |
@@ -376,13 +409,55 @@ Reglas:
 | `estado` | varchar(2) | `PO/EA/RO` + CHECK |
 | pareja `id_persona + id_vehiculo` | única | evita asociaciones duplicadas |
 
+**`rutas`** (cabecera normalizada E3)
+
+| Columna | Tipo | Nota |
+|---|---|---|
+| `id` | uuid (PK) | |
+| `codigo_ruta` | varchar(32) | **único** (clave de negocio) |
+| `id_persona` | uuid (FK→personas, restrict) | conductor |
+| `id_vehiculo` | uuid (FK→vehiculos, cascade) | |
+| `login_usuario` | varchar(64) (FK→usuarios.login, restrict) | usuario que registró la ruta |
+| `created_at_utc` / `updated_at_utc` | timestamptz | |
+
+**`paradas`** (detalle normalizado E3)
+
+| Columna | Tipo | Nota |
+|---|---|---|
+| `id` | uuid (PK) | |
+| `id_ruta` | uuid (FK→rutas, cascade) | |
+| `ubicacion` | varchar(200) | no vacía |
+| `orden_parada` | int | `BETWEEN 0 AND 6` + CHECK; 0 es la inicial |
+| `latitud` | double precision? | `BETWEEN -90 AND 90`; ambas o ninguna |
+| `longitud` | double precision? | `BETWEEN -180 AND 180`; ambas o ninguna |
+| `created_at_utc` / `updated_at_utc` | timestamptz | |
+| `(id_ruta, orden_parada)` | único | |
+
+Índice parcial `(id_ruta) WHERE latitud IS NULL` para el job de geocodificación.
+
+**`trayectos_tmp`** (aterrizaje ETL E4, denormalizada a propósito)
+
+| Columna | Tipo | Nota |
+|---|---|---|
+| `id` | uuid (PK) | |
+| `id_cargue` | bigint | índice junto con `estado` |
+| `codigo_ruta` / `identificacion_conductor` / `placa_vehiculo` / `ubicacion` / `orden_parada` / `latitud` / `longitud` / `login_usuario` | varchar | réplica en texto de la fila del Excel |
+| `id_persona` / `id_vehiculo` | uuid? | resueltos por `sp_trayecto_validar` (FK `SET NULL`) |
+| `estado` | varchar(10) | `CARGADO/VALIDADO/PROCESADO/ERROR` + CHECK |
+| `observacion` | text | motivos acumulados de rechazo |
+| `created_at_utc` / `updated_at_utc` | timestamptz | |
+
+Funciones PL/pgSQL (migración `AddCargueTrayectos`): `sp_trayecto_cargue(bigint, jsonb)`, `sp_trayecto_validar(bigint)` y `sp_trayecto_procesar(bigint)`.
+
 ### 8.2 Datos en memoria
 
 - `IMemoryCache` (`jwt:blacklist:<jti>`) cachea el estado de blacklist con TTL hasta la expiración del token.
+- `IMemoryCache` (`geocoding:<ubicación normalizada>`) evita repetir llamadas a Nominatim durante `CacheTtlHoras`.
 
 ### 8.3 Migraciones
 
-- Generar con: `dotnet ef migrations add <Name> --project src/ApiPoo2.Infrastructure` (usa la design-time factory que lee `.env`; no necesita startup project). Hoy hay una sola `InitialSchema` aplanada: ante un cambio de modelo se agrega una migración nueva, no se reescribe la historia.
+- Generar con: `dotnet ef migrations add <Name> --project src/ApiPoo2.Infrastructure` (usa la design-time factory que lee `.env`; no necesita startup project). Ante un cambio de modelo se agrega una migración nueva, no se reescribe la historia.
+- Historial: `InitialSchema` (E1/E2), `AddRutasParadasYLicencias` (E3: tablas nuevas, licencia, `UNIQUE(login)`) y `AddCargueTrayectos` (E4: staging + tres funciones; el `Down` las elimina).
 - Antes de commitear, **revisar el SQL generado**: el concurrency por `xmin` genera `AddColumn xmin` que fallaría en Postgres → se deja la migración como no-op (la columna es del sistema, ya existe).
 - IntegrationTests usan `.env.test` y Docker local; `ApiFactory` crea el schema aislado y aplica migraciones ahí. Nunca apuntan a Neon.
 - Migraciones que tocan columnas/índices involucrados en mapeos (`personas_numero_identificacion`, `vehiculos_placa`, `xmin`) deben conservar los nombres.
@@ -392,7 +467,7 @@ Reglas:
 ## 9. Configuración y secretos
 
 - Toda la configuración viene del `.env` raíz en producción (cargado por `EnvFileLoader`) y de `.env.test` en pruebas; `appsettings.json` **no** tiene connection string ni JWT.
-- Claves: `DATABASE_URL` (Neon en producción; Docker local `api_poo2_test:5433` en pruebas), `Jwt__Secret` (≥ 32 chars), `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessTokenTtlMinutes`, `Jwt__RefreshTokenTtlDays`, `Cors__AllowedOrigins` (coma-separados, opcional), `Bootstrap__*` (datos del primer admin, opcional) (`__` = separador de sección).
+- Claves: `DATABASE_URL` (Neon en producción; Docker local `api_poo2_test:5433` en pruebas), `Jwt__Secret` (≥ 32 chars), `Jwt__Issuer`, `Jwt__Audience`, `Jwt__AccessTokenTtlMinutes`, `Jwt__RefreshTokenTtlDays`, `Cors__AllowedOrigins` (coma-separados, opcional), `Bootstrap__*` (datos del primer admin, opcional), `Geocoding__*` (Nominatim: `BaseUrl`, `UserAgent`, `PaisCodigo`, `TimeoutSegundos`, `PausaEntreLlamadasMs`, `MaxPorCiclo`, `CacheTtlHoras`) y `Trayectos__Cargue__*` (`TamanioMaximoMb`, `MaxFilas`) (`__` = separador de sección).
 - Guardas de arranque (fail-fast) en `Infrastructure/DependencyInjection.AddAuth`.
 - `.env` y `.env.test` están gitignoreados: nunca commitearlos ni loguear/echo de sus valores.
 
@@ -405,10 +480,10 @@ Reglas:
 
 - **DomainTests** (offline, rápidos): entidades, value objects, invariantes y `PasswordPolicy`.
 - **ApplicationTests** (offline): orquestación de los casos de uso sin DB — validación previa, códigos de excepción y persistencia a través de `UnitOfWork` (con fakes en memoria en `Common/TestDoubles/`).
-- **InfrastructureTests** (offline): lógica determinista de Infrastructure sin I/O — `PasswordHasher`, `JwtTokenService`, converters de códigos, `DateTimeProvider`; los repositorios y migraciones se prueban solo en IntegrationTests.
+- **InfrastructureTests** (offline): lógica determinista de Infrastructure sin I/O — `PasswordHasher`, `JwtTokenService`, converters de códigos, `DateTimeProvider`, `ExcelTrayectoParser` (ClosedXML) y `NominatimGeocodingService` con `HttpMessageHandler` falso; los repositorios y migraciones se prueban solo en IntegrationTests.
 - **WebApiTests** (offline): piezas de WebApi aislables sin servidor HTTP — `ApiKeyHandler`, `ExceptionHandlingMiddleware`, `ClaimsPrincipalExtensions`; los controllers se prueban solo en IntegrationTests.
 - **ArchitectureTests** (offline): refs de capas + invariantes del modelo rico (`RichDomainModelTests`: entidades `sealed`, sin constructores públicos, sin setters públicos, construidas solo por factorías) + estándar de nombres (`TestNamingTests`: `Sujeto_Comportamiento[_Detalle]`, sin `Should`).
-- **IntegrationTests** (requieren Docker local `api_poo2-test-db:5433` y red local): `WebApplicationFactory<Program>`. Usan identificaciones/placas/códigos únicos; preferir `--filter` al iterar.
+- **IntegrationTests** (requieren Docker local `api_poo2-test-db:5433` y red local): `WebApplicationFactory<Program>`. Usan identificaciones/placas/códigos únicos; preferir `--filter` al iterar. Cubren CRUD de rutas/paradas, validaciones de alta, licencia de conductor y el cargue E4 real contra los tres SP (filas `ERROR` con observación). `ApiFactory` desactiva los `IHostedService` para que geocodificación/expiración no salgan a la red ni compitan con los datos de cada prueba.
   - **Aislamiento por ejecución**: `ApiFactory` crea un schema propio (`test_<guid>`) inyectándolo como `Search Path` en la cadena de conexión, reproduce todas las migraciones ahí, siembra un administrativo mínimo y lo borra con `CASCADE` al terminar. Las ejecuciones no tocan las tablas de `public` ni dejan residuos. Neon queda reservado para producción.
 - Flujo a seguir al escribir un test
   1. definí la invariante/motivo (bug fix → test que reproduce),
@@ -443,6 +518,8 @@ Al tocar código, verificá que:
 | `PasswordPolicy` fuera de la entidad | `User` recibe el *hash*, no el secreto, así que la entidad no puede evaluar la política | Los casos de uso la invocan antes de hashear; `PasswordPolicyTests` fija el comportamiento |
 | `Pagination` sin uso | `PagedFilter`/`PagedResult` se usarán con el primer endpoint paginado | Listo para usar; cubierto por `PaginationTests` |
 | Login mnemotécnico y PK compuesta | `User` (`id_persona + login`) y `DocumentoVehiculo` (`id_vehiculo + id_tipo_documento`) no heredan `BaseEntity` | Excepción documentada y testeada en `RichDomainModelTests` |
+| Reglas E4 duplicadas (SP y dominio) | El enunciado exige el trabajo masivo en PL/pgSQL y E3 ya valida en dominio | Ambas se fijan en `DomainTests` e `IntegrationTests` para que no diverjan |
+| Caché de geocodificación por nodo | `IMemoryCache` es local; no hay caché distribuida | TTL configurable y job idempotente: la parada sigue pendiente si falla |
 
 ## 13. Divergencias respecto de Robot/Api (referencia estructural)
 

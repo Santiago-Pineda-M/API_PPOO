@@ -143,4 +143,33 @@ public sealed class DocumentoVehiculo
         Estado = estado;
         UpdatedAtUtc = utcNow;
     }
+
+    /// <summary>
+    ///     Persiste el estado Vencido desde la tarea programada. Solo procede cuando la fecha de
+    ///     vencimiento ya pasó; la asignación manual sigue prohibida en <see cref="CambiarEstado" />.
+    /// </summary>
+    public void MarcarVencido(DateTime utcNow)
+    {
+        if (utcNow < FechaVencimiento)
+        {
+            throw new DomainValidationException(
+                "vehiculo_documento.vigente",
+                ["El documento aún está vigente; no se puede marcar como vencido."]);
+        }
+
+        if (Estado == EstadoDocumento.Vencido)
+        {
+            return;
+        }
+
+        Estado = EstadoDocumento.Vencido;
+        UpdatedAtUtc = utcNow;
+    }
+
+    /// <summary>
+    ///     Para operar una ruta el documento debe estar habilitado y no vencido por fecha, incluso
+    ///     antes de que la tarea programada persista el estado Vencido.
+    /// </summary>
+    public bool EstaHabilitado(DateTime utcNow)
+        => Estado == EstadoDocumento.Habilitado && utcNow < FechaVencimiento;
 }

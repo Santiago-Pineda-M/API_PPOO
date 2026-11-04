@@ -1,6 +1,6 @@
 # API_PPOO
 
-API REST en **.NET 10** para gestión de **personas, vehículos, documentos paramétricos y autenticación** (JWT de acceso + refresh tokens rotativos con blacklist, y `X-Api-Key` como segunda autorización).
+API REST en **.NET 10** para gestión de **personas, vehículos, documentos paramétricos, rutas con sus paradas, cargue masivo de trayectos por Excel y autenticación** (JWT de acceso + refresh tokens rotativos con blacklist, y `X-Api-Key` como segunda autorización).
 
 - **Base de datos:** PostgreSQL (Neon en producción, Docker local para pruebas) vía Npgsql + EF Core.
 - **Arquitectura:** Clean Architecture en 4 capas (`Domain ← Application ← Infrastructure ← WebApi`).
@@ -69,6 +69,8 @@ Edita `.env` con tus valores:
 | `Jwt__RefreshTokenTtlDays` | sí | Vigencia del refresh token en días (máx. 7) |
 | `Cors__AllowedOrigins` | no | Orígenes permitidos separados por coma; vacío bloquea el cross-origin desde navegador (Postman/curl no se ven afectados) |
 | `Bootstrap__*` | no | Datos del primer administrador (`POST /api/bootstrap/admin`) |
+| `Geocoding__*` | no | Geocodificación con Nominatim: `BaseUrl`, `UserAgent` (con contacto), `PaisCodigo`, `TimeoutSegundos`, `PausaEntreLlamadasMs`, `MaxPorCiclo`, `CacheTtlHoras` |
+| `Trayectos__Cargue__*` | no | Límites del Excel de cargue: `TamanioMaximoMb`, `MaxFilas` |
 
 > `.env` y `.env.test` están en `.gitignore`. **Nunca los commitees.**
 
@@ -82,7 +84,7 @@ export PATH="$PATH:$HOME/.dotnet/tools"
 dotnet ef database update --project src/ApiPoo2.Infrastructure
 ```
 
-Esto crea las tablas: `personas`, `usuarios`, `refresh_tokens`, `vehiculos`, `tipos_documento`, `documentos_vehiculo`, `conductores_vehiculos` y `access_token_blacklist`.
+Esto crea las tablas: `personas`, `usuarios`, `refresh_tokens`, `vehiculos`, `tipos_documento`, `documentos_vehiculo`, `conductores_vehiculos`, `rutas`, `paradas`, `trayectos_tmp` y `access_token_blacklist`, además de las funciones PL/pgSQL del cargue masivo (`sp_trayecto_cargue`, `sp_trayecto_validar`, `sp_trayecto_procesar`).
 
 ### 3.4 Compilar
 
@@ -175,6 +177,12 @@ curl http://localhost:5114/api/vehiculos/placa/ABC123 \
 | `GET` | `/api/vehiculos/placa/{placa}` | JWT + APIKey | Vehículo por placa con conductores y documentos |
 | `GET`/`POST`/`PUT`/`DELETE` | `/api/tipos-documento`, `/api/tipos-documento/{id}` | JWT + APIKey | Catálogo de documentos paramétricos |
 | `POST`/`PUT` | `/api/conductores/vehiculos`, `/api/conductores/estado` | JWT + APIKey | Asociación conductor–vehículo |
+| `GET`/`POST`/`PUT`/`DELETE` | `/api/rutas`, `/api/rutas/{codigoRuta}` | JWT + APIKey | Rutas: alta con parada inicial, consulta con filtros, reasignación y baja en cascada |
+| `GET`/`POST` | `/api/rutas/{codigoRuta}/paradas` | JWT + APIKey | Paradas ordenadas de una ruta (orden 0–6, máximo 7) |
+| `GET`/`PUT`/`DELETE` | `/api/paradas/{id}` | JWT + APIKey | Detalle, edición y baja de una parada |
+| `GET`/`PUT`/`DELETE` | `/api/personas/{id}/licencia` | JWT + APIKey | Licencia de conducción (metadatos, UPSERT en Base64, baja) |
+| `POST` | `/api/cargues` | JWT + APIKey | Cargue masivo de trayectos desde Excel `.xlsx` |
+| `GET`/`DELETE` | `/api/cargues`, `/api/cargues/{idCargue}` | JWT + APIKey | Resúmenes, filas con observaciones y purga de la staging |
 | `GET` | `/api/consultas/documentos-vencidos` | público | Vehículos con documentos vencidos |
 | `GET` | `/api/consultas/documentos-por-vencer?dias={n}` | público | Documentos que vencen pronto |
 | `GET` | `/api/consultas/conductores-operables?cantidad={n}` | público | Conductores en estado `PO` |
@@ -290,5 +298,6 @@ ApiPoo2.sln
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Manual completo: capas, responsabilidades, esquema de base de datos, códigos de error, reglas de tests |
 | [`docs/ADDING_FEATURES.md`](docs/ADDING_FEATURES.md) | Recetas paso a paso para añadir endpoints y features |
 | [`docs/TESTING.md`](docs/TESTING.md) | Reglas de tests, naming, integración y política de cobertura |
-| [`REQUERIMIENTOS.md`](REQUERIMIENTOS.md) | Requerimientos funcionales E1/E2 y criterios de entrega |
+| [`docs/plantilla-trayectos.xlsx`](docs/plantilla-trayectos.xlsx) | Plantilla del Excel de cargue E4: columnas obligatorias y reglas de validación |
+| [`REQUERIMIENTOS.md`](REQUERIMIENTOS.md) | Requerimientos funcionales E1–E4 y criterios de entrega |
 | [`AGENTS.md`](AGENTS.md) | Convenciones de trabajo para el equipo |

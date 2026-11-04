@@ -19,6 +19,11 @@ public sealed class Persona : BaseEntity
 
     public User? Usuario { get; private set; }
 
+    /// <summary>Licencia de conducción; solo aplica a personas de tipo CONDUCTOR.</summary>
+    public LicenciaConduccion? Licencia { get; private set; }
+
+    public DateTime? FechaVigenciaLicencia { get; private set; }
+
     /// <summary>Navegación de solo lectura; EF la materializa y nadie puede mutarla desde afuera.</summary>
     public IReadOnlyList<ConductorVehiculo> ConductoresVehiculosAssociated => ConductoresVehiculos;
 
@@ -105,7 +110,63 @@ public sealed class Persona : BaseEntity
                 ["No se puede quitar el tipo ADMINISTRATIVO a una persona que ya tiene un usuario asociado."]);
         }
 
+        if (Licencia is not null && tipo != TipoPersona.Conductor)
+        {
+            throw new DomainValidationException(
+                "persona.licencia.tipo_persona",
+                ["No se puede quitar el tipo CONDUCTOR a una persona que tiene licencia de conducción."]);
+        }
+
         TipoPersona = tipo;
         MarkUpdated(utcNow);
     }
+
+    /// <summary>
+    ///     Registra o reemplaza la licencia de conducción. Solo los conductores pueden tenerla,
+    ///     porque así lo exige el enunciado y lo refuerza el CHECK de la tabla.
+    /// </summary>
+    public void RegistrarLicencia(byte[] contenido, DateTime fechaVigencia, DateTime utcNow)
+    {
+        if (!EsConductor())
+        {
+            throw new DomainValidationException(
+                "persona.licencia.tipo_persona",
+                ["Solo las personas de tipo CONDUCTOR pueden tener licencia de conducción."]);
+        }
+
+        if (fechaVigencia == default)
+        {
+            throw new DomainValidationException(
+                "persona.licencia.vigencia",
+                ["La fecha de vigencia de la licencia es obligatoria."]);
+        }
+
+        if (fechaVigencia.Date < utcNow.Date)
+        {
+            throw new DomainValidationException(
+                "persona.licencia.vigencia",
+                ["La fecha de vigencia de la licencia no puede ser anterior a hoy."]);
+        }
+
+        Licencia = LicenciaConduccion.From(contenido);
+        FechaVigenciaLicencia = fechaVigencia;
+        MarkUpdated(utcNow);
+    }
+
+    public void EliminarLicencia(DateTime utcNow)
+    {
+        if (Licencia is null)
+        {
+            return;
+        }
+
+        Licencia = null;
+        FechaVigenciaLicencia = null;
+        MarkUpdated(utcNow);
+    }
+
+    public bool TieneLicencia() => Licencia is not null;
+
+    public bool LicenciaVigente(DateTime utcNow)
+        => Licencia is not null && FechaVigenciaLicencia.HasValue && FechaVigenciaLicencia.Value > utcNow;
 }

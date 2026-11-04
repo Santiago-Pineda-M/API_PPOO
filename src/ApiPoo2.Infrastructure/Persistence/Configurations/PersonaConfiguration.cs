@@ -19,6 +19,12 @@ public sealed class PersonaConfiguration : IEntityTypeConfiguration<Persona>
             "numero_identificacion ~ '^[0-9]+$'");
         builder.HasCheckConstraint("ck_personas_correo",
             "correo_electronico ~ '^[^@]+@[^@]+\\.[^@]+$'");
+        builder.HasCheckConstraint("ck_personas_licencia_par",
+            "(licencia_conduccion IS NULL) = (fecha_vigencia_licencia IS NULL)");
+        builder.HasCheckConstraint("ck_personas_licencia_contenido",
+            "licencia_conduccion IS NULL OR octet_length(licencia_conduccion) > 0");
+        builder.HasCheckConstraint("ck_personas_licencia_solo_conductor",
+            "licencia_conduccion IS NULL OR tipo_persona = 'CONDUCTOR'");
 
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).HasColumnName("id");
@@ -60,6 +66,17 @@ public sealed class PersonaConfiguration : IEntityTypeConfiguration<Persona>
             .HasConversion(new TipoPersonaConverter())
             .HasMaxLength(20)
             .IsRequired();
+
+        builder.Property(p => p.Licencia)
+            .HasColumnName("licencia_conduccion")
+            .HasConversion(
+                v => v.ToArray(),
+                b => LicenciaConduccion.From(b))
+            .HasColumnType("bytea");
+
+        builder.Property(p => p.FechaVigenciaLicencia)
+            .HasColumnName("fecha_vigencia_licencia")
+            .HasColumnType("timestamptz");
 
         builder.HasIndex(p => p.NumeroIdentificacion).IsUnique();
         builder.HasIndex(p => p.CorreoElectronico).IsUnique();

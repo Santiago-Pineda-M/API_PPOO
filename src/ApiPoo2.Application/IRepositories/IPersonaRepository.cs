@@ -31,4 +31,12 @@ public interface IPersonaRepository : IRepository<Persona>
         CancellationToken cancellationToken = default);
 
     Task<int> CountPersonasConUsuarioAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Conductores cuya licencia ya venció, con sus asociaciones a vehículos para que la tarea
+    ///     programada pueda restringirlos (estado RO).
+    /// </summary>
+    Task<IReadOnlyList<Persona>> GetConLicenciaVencidaAsync(
+        DateTime utcNow,
+        CancellationToken cancellationToken = default);
 }

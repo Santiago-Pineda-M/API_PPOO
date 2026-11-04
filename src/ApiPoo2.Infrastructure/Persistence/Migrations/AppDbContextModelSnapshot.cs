@@ -132,6 +132,14 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamptz")
                         .HasColumnName("created_at_utc");
 
+                    b.Property<DateTime?>("FechaVigenciaLicencia")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_vigencia_licencia");
+
+                    b.Property<byte[]>("Licencia")
+                        .HasColumnType("bytea")
+                        .HasColumnName("licencia_conduccion");
+
                     b.Property<string>("Nombres")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -173,6 +181,12 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                     b.ToTable("personas", null, t =>
                         {
                             t.HasCheckConstraint("ck_personas_correo", "correo_electronico ~ '^[^@]+@[^@]+\\.[^@]+$'");
+
+                            t.HasCheckConstraint("ck_personas_licencia_contenido", "licencia_conduccion IS NULL OR octet_length(licencia_conduccion) > 0");
+
+                            t.HasCheckConstraint("ck_personas_licencia_par", "(licencia_conduccion IS NULL) = (fecha_vigencia_licencia IS NULL)");
+
+                            t.HasCheckConstraint("ck_personas_licencia_solo_conductor", "licencia_conduccion IS NULL OR tipo_persona = 'CONDUCTOR'");
 
                             t.HasCheckConstraint("ck_personas_num_identificacion", "numero_identificacion ~ '^[0-9]+$'");
 
@@ -258,6 +272,111 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                     b.HasIndex("PersonaId", "Login");
 
                     b.ToTable("refresh_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.Rutas.Parada", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("IdRuta")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_ruta");
+
+                    b.Property<double?>("Latitud")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitud");
+
+                    b.Property<double?>("Longitud")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitud");
+
+                    b.Property<int>("OrdenParada")
+                        .HasColumnType("integer")
+                        .HasColumnName("orden_parada");
+
+                    b.Property<string>("Ubicacion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ubicacion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdRuta");
+
+                    b.HasIndex("IdRuta", "OrdenParada")
+                        .IsUnique();
+
+                    b.ToTable("paradas", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_paradas_coordenadas", "(latitud IS NULL AND longitud IS NULL) OR (latitud IS NOT NULL AND longitud IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_paradas_latitud", "latitud IS NULL OR (latitud BETWEEN -90 AND 90)");
+
+                            t.HasCheckConstraint("ck_paradas_longitud", "longitud IS NULL OR (longitud BETWEEN -180 AND 180)");
+
+                            t.HasCheckConstraint("ck_paradas_orden", "orden_parada BETWEEN 0 AND 6");
+                        });
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.Rutas.Ruta", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("codigo_ruta");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("LoginUsuario")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("login_usuario");
+
+                    b.Property<Guid>("PersonaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_persona");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("VehiculoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_vehiculo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("LoginUsuario");
+
+                    b.HasIndex("PersonaId");
+
+                    b.HasIndex("VehiculoId");
+
+                    b.ToTable("rutas", (string)null);
                 });
 
             modelBuilder.Entity("ApiPoo2.Domain.TiposDocumento.DocumentoVehiculo", b =>
@@ -373,6 +492,97 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ApiPoo2.Domain.Trayectos.TrayectoTemporal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CodigoRuta")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("codigo_ruta");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("estado");
+
+                    b.Property<long>("IdCargue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id_cargue");
+
+                    b.Property<string>("IdentificacionConductor")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("identificacion_conductor");
+
+                    b.Property<string>("Latitud")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("latitud");
+
+                    b.Property<string>("LoginUsuario")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("login_usuario");
+
+                    b.Property<string>("Longitud")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("longitud");
+
+                    b.Property<string>("Observacion")
+                        .HasColumnType("text")
+                        .HasColumnName("observacion");
+
+                    b.Property<string>("OrdenParada")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("orden_parada");
+
+                    b.Property<Guid?>("PersonaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_persona");
+
+                    b.Property<string>("PlacaVehiculo")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("placa_vehiculo");
+
+                    b.Property<string>("Ubicacion")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ubicacion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("VehiculoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id_vehiculo");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonaId");
+
+                    b.HasIndex("VehiculoId");
+
+                    b.HasIndex("IdCargue", "Estado");
+
+                    b.ToTable("trayectos_tmp", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_trayectos_tmp_estado", "estado IN ('CARGADO','VALIDADO','PROCESADO','ERROR')");
+                        });
+                });
+
             modelBuilder.Entity("ApiPoo2.Domain.Users.User", b =>
                 {
                     b.Property<Guid>("IdPersona")
@@ -440,7 +650,8 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                     b.HasIndex("IdPersona")
                         .IsUnique();
 
-                    b.HasIndex("Login");
+                    b.HasIndex("Login")
+                        .IsUnique();
 
                     b.HasIndex("IdPersona", "ApiKey");
 
@@ -563,6 +774,34 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ApiPoo2.Domain.Rutas.Parada", b =>
+                {
+                    b.HasOne("ApiPoo2.Domain.Rutas.Ruta", null)
+                        .WithMany("Paradas")
+                        .HasForeignKey("IdRuta")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.Rutas.Ruta", b =>
+                {
+                    b.HasOne("ApiPoo2.Domain.Personas.Persona", "Persona")
+                        .WithMany()
+                        .HasForeignKey("PersonaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApiPoo2.Domain.Vehiculos.Vehiculo", "Vehiculo")
+                        .WithMany()
+                        .HasForeignKey("VehiculoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Persona");
+
+                    b.Navigation("Vehiculo");
+                });
+
             modelBuilder.Entity("ApiPoo2.Domain.TiposDocumento.DocumentoVehiculo", b =>
                 {
                     b.HasOne("ApiPoo2.Domain.TiposDocumento.TipoDocumento", null)
@@ -576,6 +815,19 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                         .HasForeignKey("VehiculoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.Trayectos.TrayectoTemporal", b =>
+                {
+                    b.HasOne("ApiPoo2.Domain.Personas.Persona", null)
+                        .WithMany()
+                        .HasForeignKey("PersonaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ApiPoo2.Domain.Vehiculos.Vehiculo", null)
+                        .WithMany()
+                        .HasForeignKey("VehiculoId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("ApiPoo2.Domain.Users.User", b =>
@@ -592,6 +844,11 @@ namespace ApiPoo2.Infrastructure.Persistence.Migrations
                     b.Navigation("ConductoresVehiculosAssociated");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("ApiPoo2.Domain.Rutas.Ruta", b =>
+                {
+                    b.Navigation("Paradas");
                 });
 
             modelBuilder.Entity("ApiPoo2.Domain.Users.User", b =>

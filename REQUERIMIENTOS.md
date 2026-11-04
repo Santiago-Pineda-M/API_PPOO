@@ -4,6 +4,8 @@ Fuentes normativas:
 
 - `documentos requerimientos/Proyecto E1 V2.pdf`
 - `documentos requerimientos/Proyecto E2 V2.pdf`
+- `documentos requerimientos/Proyecto E3 V2.pdf`
+- `documentos requerimientos/Proyecto E4 V2.pdf`
 
 Adaptación tecnológica: los PDF mencionan Spring Boot, Java, JPA, Maven y MySQL. Este repositorio usa **.NET 10, EF Core y PostgreSQL**. Los requerimientos funcionales se aplican igual; la tecnología se traduce así:
 
@@ -486,6 +488,124 @@ Criterio:
 
 ---
 
+# E3 — Rutas, paradas y licencia de conducción
+
+El "trayecto" del enunciado se modela normalizado: `Ruta` (cabecera con código, conductor,
+vehículo y login) + `Parada` (detalle ordenado 0–6). Cada dato vive una sola vez.
+
+## F-E3-RUT-01 — Crear ruta con parada inicial
+
+- `POST /api/rutas` (JWT + APIKey) → `201` + `Location: /api/rutas/{codigoRuta}`.
+- Entradas: `codigoRuta`, `personaId`, `vehiculoId`, `ubicacionInicial`, `latitud?`, `longitud?`.
+  El login sale del token, nunca del cuerpo.
+- Valida conductor `CONDUCTOR` con licencia vigente, asociación en `PO` y todos los documentos
+  del vehículo `HABILITADO` y no vencidos.
+- Códigos: `ruta.codigo.conflict` (409), `ruta.conductor.invalido` (403),
+  `ruta.licencia.vencida` / `ruta.conductor.no_operable` / `ruta.documentos.no_habilitados` (409).
+
+## F-E3-RUT-02 — Agregar parada
+
+- `POST /api/rutas/{codigoRuta}/paradas` → `201` + `Location: /api/paradas/{id}`.
+- Orden 0–6, sin repetir y máximo 7 paradas por ruta (`parada.maximo`, `parada.orden.duplicado` → 409).
+
+## F-E3-RUT-03 — Consultar ruta con paradas ordenadas
+
+- `GET /api/rutas/{codigoRuta}` → `200` con paradas ordenadas; `404 ruta.not_found`.
+
+## F-E3-RUT-04 — Reasignar conductor y vehículo
+
+- `PUT /api/rutas/{codigoRuta}` revalida conductor, licencia, asociación y documentos;
+  `409` si la nueva pareja no puede operar. El `codigoRuta` es inmutable.
+
+## F-E3-RUT-05 — Eliminar ruta
+
+- `DELETE /api/rutas/{codigoRuta}` → `204`; las paradas caen por cascada.
+
+## F-E3-PAR-01 — Consultar paradas
+
+- `GET /api/rutas/{codigoRuta}/paradas` → paradas ordenadas.
+- `GET /api/paradas/{id}` → detalle; `404 parada.not_found`.
+
+## F-E3-PAR-02 — Actualizar parada
+
+- `PUT /api/paradas/{id}` con ubicación, orden y coordenadas opcionales.
+- Coordenadas ambas o ninguna y en rango (`parada.coordenadas` → 400); orden ocupado → 409.
+
+## F-E3-PAR-03 — Eliminar parada
+
+- `DELETE /api/paradas/{id}` → `204`.
+- La parada inicial (orden 0) no se elimina: `409 parada.inicial.requerida` (se borra la ruta).
+
+## F-E3-LIC-01 — Registrar licencia de conducción
+
+- `PUT /api/personas/{id}/licencia` (UPSERT) con `contenidoBase64` (PDF) y `fechaVigencia`.
+- Solo `CONDUCTOR` (`403 persona.licencia.tipo_persona`); Base64 inválido → 400.
+
+## F-E3-LIC-02 — Consultar licencia
+
+- `GET /api/personas/{id}/licencia` devuelve metadatos (vigencia, vigente, longitud); nunca el binario.
+- `404 persona.licencia.not_found` si no tiene licencia.
+
+## F-E3-LIC-03 — Eliminar licencia
+
+- `DELETE /api/personas/{id}/licencia` → `204`.
+
+## F-E3-CON-01 — Ruta por código
+
+- Cubierta por `GET /api/rutas/{codigoRuta}` (con paradas ordenadas).
+
+## F-E3-CON-02 — Rutas por conductor
+
+- `GET /api/rutas?numeroIdentificacion={numero}`.
+
+## F-E3-CON-03 — Rutas por vehículo
+
+- `GET /api/rutas?placa={placa}`.
+
+## F-E3-CON-04 — Rutas no operables
+
+- `GET /api/rutas?operable=false` (también `codigo=` y `operable=true`); cada resumen incluye
+  `motivoNoOperable`.
+
+## F-E3-GEO-01 — Geocodificación de paradas
+
+- Job cada 90 s: toma paradas sin coordenadas, consulta OpenStreetMap **Nominatim** (≤ 1 req/s,
+  `User-Agent` identificable, caché por ubicación) y persiste latitud/longitud con `Ruta.AsignarCoordenadas`.
+- Corrección manual con `PUT /api/paradas/{id}` (no hay endpoint con verbo extra).
+- Proveedor detrás del puerto `IGeocodingService`: se puede cambiar sin tocar casos de uso.
+
+---
+
+# E4 — Cargue masivo de trayectos
+
+## F-E4-SRV-01 — Cargar Excel de trayectos
+
+- `POST /api/cargues` (multipart `.xlsx`, ≤ 5 MB y 5000 filas) → `201` + `Location: /api/cargues/{idCargue}`.
+- Columnas: `codigo_ruta`, `identificacion_conductor`, `placa_vehiculo`, `ubicacion`,
+  `orden_parada`, `latitud`, `longitud`, `login_usuario`.
+- El caso de uso transforma y valida la estructura (tipos, rangos, coherencia por ruta: mismo
+  conductor/vehículo/login, orden único, máximo 7 y parada inicial).
+- `sp_trayecto_cargue` → staging `trayectos_tmp`; `sp_trayecto_validar` resuelve conductor,
+  vehículo y login y marca `VALIDADO`/`ERROR` con observación; `sp_trayecto_procesar` crea
+  `rutas`/`paradas` y pasa a `PROCESADO`. Los tres corren en una transacción.
+- Errores: `400 cargue.archivo.formato|vacio|columnas.invalidas`, `409 cargue.duplicado`
+  (un cargue por minuto, `idCargue = yyyyMMddHHmm`).
+
+## F-E4-SRV-02 — Consultar un cargue
+
+- `GET /api/cargues/{idCargue}?estado=` → resumen y filas con observaciones; filtro por estado.
+- `404 cargue.not_found`.
+
+## F-E4-SRV-03 — Listar cargues
+
+- `GET /api/cargues?estado=` → un resumen por `idCargue` con totales por estado.
+
+## F-E4-SRV-04 — Purgar un cargue
+
+- `DELETE /api/cargues/{idCargue}` → `204`; borra solo la staging, no las rutas ya procesadas.
+
+---
+
 # Seguridad transversal
 
 ## F-SEC-01 — JWT a la par con APIKey
@@ -524,7 +644,13 @@ Tablas:
 - `tipos_documento`
 - `documentos_vehiculo`
 - `conductores_vehiculos`
+- `rutas`
+- `paradas`
+- `trayectos_tmp` (aterrizaje E4, denormalizada a propósito)
 - `access_token_blacklist`
+
+Funciones PL/pgSQL del cargue masivo: `sp_trayecto_cargue`, `sp_trayecto_validar`,
+`sp_trayecto_procesar`.
 
 Restricciones mínimas:
 
@@ -534,12 +660,18 @@ Restricciones mínimas:
 - `tipos_documento`: tipos aplicables `A/M/AM`; obligatoriedad `RA/RM/RR`.
 - `documentos_vehiculo`: estado válido y contenido no vacío.
 - `conductores_vehiculos`: estado `PO/EA/RO` y pareja persona-vehículo única.
+- `personas`: licencia y fecha de vigencia ambas nulas o ambas presentes; licencia no vacía y solo en `CONDUCTOR`.
+- `rutas`: `codigo_ruta` único; conductor `RESTRICT`, vehículo `CASCADE`, login `RESTRICT`.
+- `paradas`: orden `0..6` único por ruta, coordenadas ambas o ninguna y en rango, FK `CASCADE` a la ruta.
+- `trayectos_tmp`: estado `CARGADO/VALIDADO/PROCESADO/ERROR`; conserva la fila original en texto.
 
 Invariantes que la base no puede imponer sola:
 
 - Solo `CONDUCTOR` puede asociarse a vehículos.
 - Un vehículo no se crea sin documento asociado.
 - Una persona `Administrativo` siempre termina con usuario.
+- Una ruta exige conductor `CONDUCTOR` con licencia vigente, asociación `PO` y documentos del vehículo habilitados.
+- Máximo 7 paradas por ruta; la inicial (orden 0) solo desaparece al eliminar la ruta.
 
 Estas tres se garantizan en dominio, casos de uso y pruebas.
 
@@ -566,9 +698,9 @@ Estas tres se garantizan en dominio, casos de uso y pruebas.
 
 # Criterios globales de entrega
 
-- Migraciones generadas por EF Core, sin SQL manual divergente (una sola `InitialSchema` aplanada).
+- Migraciones generadas por EF Core, sin SQL manual divergente: `InitialSchema`, `AddRutasParadasYLicencias` y `AddCargueTrayectos`.
 - `dotnet build` limpio.
-- Pruebas en verde: 117 unitarias + 29 aplicación + 13 arquitectura + 18 integración = **177/177**.
+- Pruebas en verde: 379 dominio + 134 aplicación + 38 infraestructura + 14 arquitectura + 26 WebApi + 33 integración = **624/624**.
 - Pruebas de integración contra PostgreSQL local en Docker (`api-poo2-test-db:5433`, `.env.test`), con schema aislado por ejecución; Neon reservado para producción.
 - Base de producción sin datos de prueba antes de la entrega.
-- Colección Postman con los flujos E1/E2 y los casos públicos/protegidos.
+- Colección Postman con los flujos E1–E4 y los casos públicos/protegidos.

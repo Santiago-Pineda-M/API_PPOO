@@ -74,4 +74,15 @@ public sealed class PersonaRepository : GenericRepository<Persona>, IPersonaRepo
 
     public Task<int> CountPersonasConUsuarioAsync(CancellationToken cancellationToken = default)
         => DbSet.AsNoTracking().CountAsync(p => p.Usuario != null, cancellationToken);
+
+    public async Task<IReadOnlyList<Persona>> GetConLicenciaVencidaAsync(
+        DateTime utcNow,
+        CancellationToken cancellationToken = default)
+        => await DbSet
+            .Include(p => p.Usuario)
+            .Include(p => p.ConductoresVehiculosAssociated)
+            .Where(p => p.Licencia != null
+                && p.FechaVigenciaLicencia != null
+                && p.FechaVigenciaLicencia <= utcNow)
+            .ToListAsync(cancellationToken);
 }

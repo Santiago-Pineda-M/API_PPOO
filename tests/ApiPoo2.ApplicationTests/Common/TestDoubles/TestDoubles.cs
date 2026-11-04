@@ -5,7 +5,9 @@ using ApiPoo2.Application.IServices;
 using ApiPoo2.Domain.BlacklistedTokens;
 using ApiPoo2.Domain.Personas;
 using ApiPoo2.Domain.RefreshTokens;
+using ApiPoo2.Domain.Rutas;
 using ApiPoo2.Domain.TiposDocumento;
+using ApiPoo2.Domain.Trayectos;
 using ApiPoo2.Domain.Users;
 using ApiPoo2.Domain.Vehiculos;
 using Microsoft.Extensions.Logging;
@@ -101,6 +103,14 @@ public sealed class FakePersonaRepository : IPersonaRepository
     public Task<int> CountPersonasConUsuarioAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(Items.Count(p => p.Usuario is not null));
 
+    public Task<IReadOnlyList<Persona>> GetConLicenciaVencidaAsync(
+        DateTime utcNow,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Persona>>(
+            Items.Where(p => p.Licencia is not null
+                && p.FechaVigenciaLicencia.HasValue
+                && p.FechaVigenciaLicencia.Value <= utcNow).ToList());
+
     public Task<bool> AnyAsync(
         Expression<Func<Persona, bool>> predicate,
         CancellationToken cancellationToken = default)
@@ -159,6 +169,10 @@ public sealed class FakeVehiculoRepository : IVehiculoRepository
         => Task.FromResult<IReadOnlyList<Vehiculo>>(Items.Where(v => v.TipoVehiculo == tipo).ToList());
 
     public Task<IReadOnlyList<Vehiculo>> GetAllWithDetailsAsync(
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Vehiculo>>([.. Items]);
+
+    public Task<IReadOnlyList<Vehiculo>> GetAllWithDetailsForUpdateAsync(
         CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<Vehiculo>>([.. Items]);
 
@@ -328,4 +342,322 @@ public sealed class FakeRefreshTokenRepository : IRefreshTokenRepository
     }
 
     public void Remove(RefreshToken entity) => Items.Remove(entity);
+}
+
+public sealed class FakeRutaRepository : IRutaRepository
+{
+    public List<Ruta> Items { get; } = [];
+
+    public Task<Ruta?> GetByCodigoAsync(CodigoRuta codigo, CancellationToken cancellationToken = default)
+        => Task.FromResult<Ruta?>(Items.FirstOrDefault(r => r.Codigo == codigo));
+
+    public Task<Ruta?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => Task.FromResult<Ruta?>(Items.FirstOrDefault(r => r.Id == id));
+
+    public Task<Ruta?> GetByParadaAsync(Guid paradaId, CancellationToken cancellationToken = default)
+        => Task.FromResult<Ruta?>(Items.FirstOrDefault(r => r.Paradas.Any(p => p.Id == paradaId)));
+
+    public Task<bool> ExistsAsync(CodigoRuta codigo, CancellationToken cancellationToken = default)
+        => Task.FromResult(Items.Any(r => r.Codigo == codigo));
+
+    public Task<IReadOnlyList<Ruta>> GetAllAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Ruta>>([.. Items]);
+
+    public Task<IReadOnlyList<Ruta>> GetByPersonaAsync(
+        Guid personaId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Ruta>>(Items.Where(r => r.PersonaId == personaId).ToList());
+
+    public Task<IReadOnlyList<Ruta>> GetByPlacaAsync(
+        Placa placa,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Ruta>>(
+            Items.Where(r => r.Vehiculo?.Placa.Value == placa.Value).ToList());
+
+    public Task<IReadOnlyList<ParadaPendienteGeocodificar>> GetPendientesCoordenadasAsync(
+        int limite,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<ParadaPendienteGeocodificar>>(
+            Items
+                .SelectMany(r => r.Paradas
+                    .Where(p => !p.TieneCoordenadas())
+                    .Select(p => new ParadaPendienteGeocodificar(
+                        r.Id,
+                        p.Id,
+                        p.Ubicacion.Value,
+                        p.CreatedAtUtc)))
+                .OrderBy(p => p.CreadaUtc)
+                .Take(limite)
+                .ToList());
+
+    public void Add(Ruta ruta) => Items.Add(ruta);
+
+    public List<Parada> ParadasAgregadas { get; } = [];
+
+    public void AddParada(Parada parada) => ParadasAgregadas.Add(parada);
+
+    public void Remove(Ruta ruta) => Items.Remove(ruta);
+}
+
+public sealed class FakeTrayectoTemporalRepository : ITrayectoTemporalRepository
+{
+    public List<TrayectoTemporal> Items { get; } = [];
+
+    public int Eliminados { get; private set; }
+
+    public Task<bool> ExisteCargueAsync(long idCargue, CancellationToken cancellationToken = default)
+        => Task.FromResult(Items.Any(t => t.IdCargue == idCargue));
+
+    public Task<IReadOnlyList<TrayectoTemporal>> GetByIdCargueAsync(
+        long idCargue,
+        EstadoTrayectoTemporal? estado = null,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<TrayectoTemporal>>(
+            Items
+                .Where(t => t.IdCargue == idCargue)
+                .Where(t => estado is null || t.Estado == estado.Value)
+                .OrderBy(t => t.CreatedAtUtc)
+                .ToList());
+
+    public Task<IReadOnlyList<CargueResumen>> GetResumenesAsync(
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<CargueResumen>>(
+            Items
+                .GroupBy(t => t.IdCargue)
+                .Select(g => new CargueResumen(
+                    g.Key,
+                    g.Min(t => t.CreatedAtUtc),
+                    g.Count(),
+                    g.Count(t => t.Estado == EstadoTrayectoTemporal.Cargado),
+                    g.Count(t => t.Estado == EstadoTrayectoTemporal.Validado),
+                    g.Count(t => t.Estado == EstadoTrayectoTemporal.Procesado),
+                    g.Count(t => t.Estado == EstadoTrayectoTemporal.Error)))
+                .OrderByDescending(r => r.IdCargue)
+                .ToList());
+
+    public Task<int> EliminarCargueAsync(long idCargue, CancellationToken cancellationToken = default)
+    {
+        var eliminados = Items.RemoveAll(t => t.IdCargue == idCargue);
+        Eliminados += eliminados;
+        return Task.FromResult(eliminados);
+    }
+}
+
+public sealed class FakeExcelTrayectoParser : IExcelTrayectoParser
+{
+    public List<FilaTrayectoExcel> Filas { get; } = [];
+
+    public Exception? ThrowOnParse { get; set; }
+
+    public string? UltimoNombreArchivo { get; private set; }
+
+    public IReadOnlyList<FilaTrayectoExcel> Parse(Stream contenido, string nombreArchivo)
+    {
+        UltimoNombreArchivo = nombreArchivo;
+
+        if (ThrowOnParse is not null)
+        {
+            throw ThrowOnParse;
+        }
+
+        return [.. Filas];
+    }
+}
+
+public sealed class FakeCargueTrayectosProcedures : ICargueTrayectosProcedures
+{
+    public ResumenCargue Resumen { get; set; } = new(0, 0, 0, 0);
+
+    public long? UltimoIdCargue { get; private set; }
+
+    public IReadOnlyList<FilaTrayectoExcel> UltimasFilas { get; private set; } = [];
+
+    public Task<ResumenCargue> EjecutarAsync(
+        long idCargue,
+        IReadOnlyList<FilaTrayectoExcel> filas,
+        CancellationToken cancellationToken = default)
+    {
+        UltimoIdCargue = idCargue;
+        UltimasFilas = filas;
+
+        return Task.FromResult(Resumen);
+    }
+}
+
+public sealed class FakeGeocodingService : IGeocodingService
+{
+    public Dictionary<string, Coordenadas?> Coordenadas { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public List<string> Consultas { get; } = [];
+
+    public Exception? ThrowOnGeocode { get; set; }
+
+    public Task<Coordenadas?> GeocodeAsync(
+        string ubicacion,
+        CancellationToken cancellationToken = default)
+    {
+        Consultas.Add(ubicacion);
+
+        if (ThrowOnGeocode is not null)
+        {
+            return Task.FromException<Coordenadas?>(ThrowOnGeocode);
+        }
+
+        return Task.FromResult(Coordenadas.GetValueOrDefault(ubicacion));
+    }
+}
+
+public sealed class FakeEmailNotifier : IEmailNotifier
+{
+    public List<(string Correo, string Login)> Notificaciones { get; } = [];
+
+    public Task NotificarRestriccionAsync(
+        string correo,
+        string login,
+        CancellationToken cancellationToken = default)
+    {
+        Notificaciones.Add((correo, login));
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Fábrica de agregados válidos para los casos de uso de rutas y cargues.</summary>
+public static class DominioDePrueba
+{
+    public static Persona Conductor(
+        string identificacion = "1234567890",
+        string correo = "conductor@example.com")
+        => Persona.Register(
+            TipoIdentificacion.CedulaCiudadania,
+            identificacion,
+            "Carlos",
+            "Ríos",
+            correo,
+            TipoPersona.Conductor,
+            TestData.Ahora);
+
+    public static Persona ConductorConLicencia(
+        string identificacion = "1234567890",
+        string correo = "conductor@example.com",
+        DateTime? vigencia = null)
+    {
+        var persona = Conductor(identificacion, correo);
+        persona.RegistrarLicencia(
+            TestData.PdfValido,
+            vigencia ?? TestData.Ahora.AddMonths(6),
+            TestData.Ahora);
+
+        return persona;
+    }
+
+    public static Vehiculo Vehiculo(string placa = "ABC123")
+        => Domain.Vehiculos.Vehiculo.Register(
+            placa,
+            TipoVehiculo.Automovil,
+            TipoServicio.Privado,
+            TipoCombustible.Gasolina,
+            5,
+            "#FF5733",
+            2020,
+            "Toyota",
+            "Fortuner SW",
+            TestData.Ahora);
+
+    public static Vehiculo VehiculoConDocumentos(
+        TipoDocumento documento,
+        string placa = "ABC123",
+        DateTime? vencimiento = null,
+        EstadoDocumento estado = EstadoDocumento.Habilitado)
+    {
+        var vehiculo = Vehiculo(placa);
+        var relacion = vehiculo.AdjuntarDocumento(
+            documento,
+            TestData.PdfValido,
+            "SOAT.pdf",
+            TestData.Ahora.AddDays(-10),
+            vencimiento ?? TestData.Ahora.AddMonths(6),
+            TestData.Ahora);
+
+        if (estado != EstadoDocumento.EnVerificacion)
+        {
+            relacion.CambiarEstado(estado, TestData.Ahora);
+        }
+
+        return vehiculo;
+    }
+
+    public static TipoDocumento TipoDocumento(string codigo = "SOAT")
+        => Domain.TiposDocumento.TipoDocumento.Register(
+            codigo,
+            codigo,
+            "AM",
+            "RR",
+            "Seguro Obligatorio",
+            TestData.Ahora);
+
+    public static ConductorVehiculo AsociarOperable(Persona persona, Vehiculo vehiculo)
+    {
+        var relacion = ConductorVehiculo.Crear(
+            persona.Id,
+            vehiculo.Id,
+            TestData.Ahora,
+            EstadoConductor.Po);
+
+        persona.AgregarAsociacion(relacion);
+        return relacion;
+    }
+
+    public static Ruta RutaOperable(
+        string codigo = "R-001",
+        string ubicacionInicial = "Terminal de Ibagué",
+        string identificacion = "1234567890",
+        string placa = "ABC123")
+    {
+        var documento = TipoDocumento();
+        var persona = ConductorConLicencia(identificacion);
+        var vehiculo = VehiculoConDocumentos(documento, placa);
+        AsociarOperable(persona, vehiculo);
+
+        var ruta = Ruta.Registrar(
+            codigo,
+            persona.Id,
+            vehiculo.Id,
+            "admin",
+            ubicacionInicial,
+            null,
+            null,
+            TestData.Ahora);
+
+        return ruta.ConNavegaciones(persona, vehiculo);
+    }
+}
+
+public static class RutaTestExtensions
+{
+    private static readonly System.Reflection.PropertyInfo PersonaProperty =
+        typeof(Ruta).GetProperty(nameof(Ruta.Persona))!;
+
+    private static readonly System.Reflection.PropertyInfo VehiculoProperty =
+        typeof(Ruta).GetProperty(nameof(Ruta.Vehiculo))!;
+
+    public static Ruta ConNavegaciones(this Ruta ruta, Persona persona, Vehiculo vehiculo)
+    {
+        PersonaProperty.SetValue(ruta, persona);
+        VehiculoProperty.SetValue(ruta, vehiculo);
+        return ruta;
+    }
+}
+
+public static class PersonaTestExtensions
+{
+    private static readonly System.Reflection.PropertyInfo AsociacionesProperty =
+        typeof(Persona).GetProperty(
+            "ConductoresVehiculos",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+
+    public static void AgregarAsociacion(this Persona persona, ConductorVehiculo relacion)
+    {
+        var lista = (List<ConductorVehiculo>)AsociacionesProperty.GetValue(persona)!;
+        lista.Add(relacion);
+    }
 }

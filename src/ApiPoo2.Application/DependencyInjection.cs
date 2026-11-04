@@ -1,8 +1,21 @@
 using ApiPoo2.Application.UseCases.Auth;
 using ApiPoo2.Application.UseCases.Bootstrap;
+using ApiPoo2.Application.UseCases.Cargues;
 using ApiPoo2.Application.UseCases.Conductores;
 using ApiPoo2.Application.UseCases.Consultas;
+using ApiPoo2.Application.UseCases.Paradas.Create;
+using ApiPoo2.Application.UseCases.Paradas.Delete;
+using ApiPoo2.Application.UseCases.Paradas.Get;
+using ApiPoo2.Application.UseCases.Paradas.List;
+using ApiPoo2.Application.UseCases.Paradas.Update;
+using ApiPoo2.Application.UseCases.Personas.Licencia;
+using ApiPoo2.Application.UseCases.Rutas.Create;
+using ApiPoo2.Application.UseCases.Rutas.Delete;
+using ApiPoo2.Application.UseCases.Rutas.Get;
+using ApiPoo2.Application.UseCases.Rutas.List;
+using ApiPoo2.Application.UseCases.Rutas.Update;
 using ApiPoo2.Application.UseCases.TiposDocumento;
+using ApiPoo2.Application.UseCases.Trayectos.Jobs;
 using ApiPoo2.Application.UseCases.Personas;
 using ApiPoo2.Application.UseCases.Personas.Create;
 using ApiPoo2.Application.UseCases.Personas.Get;
@@ -77,6 +90,36 @@ public static class DependencyInjection
         services.AddScoped<AssociateVehiculosUseCase>();
         services.AddScoped<ChangeConductorEstadoUseCase>();
 
+        // Rutas (E3)
+        services.AddScoped<CreateRutaUseCase>();
+        services.AddScoped<ListRutasUseCase>();
+        services.AddScoped<GetRutaUseCase>();
+        services.AddScoped<UpdateRutaUseCase>();
+        services.AddScoped<DeleteRutaUseCase>();
+
+        // Paradas (subrecurso de ruta)
+        services.AddScoped<ListParadasUseCase>();
+        services.AddScoped<CreateParadaUseCase>();
+        services.AddScoped<GetParadaUseCase>();
+        services.AddScoped<UpdateParadaUseCase>();
+        services.AddScoped<DeleteParadaUseCase>();
+
+        // Licencia de conducción (subrecurso de persona)
+        services.AddScoped<GetLicenciaConductorUseCase>();
+        services.AddScoped<RegistrarLicenciaConductorUseCase>();
+        services.AddScoped<EliminarLicenciaConductorUseCase>();
+
+        // Cargue masivo E4
+        services.AddScoped<CargarTrayectosExcelUseCase>();
+        services.AddScoped<ListarCarguesUseCase>();
+        services.AddScoped<GetCargueUseCase>();
+        services.AddScoped<EliminarCargueUseCase>();
+
+        // Tareas programadas
+        services.AddScoped<ExpirarLicenciasConductoresUseCase>();
+        services.AddScoped<MarcarDocumentosVencidosUseCase>();
+        services.AddScoped<GeocodificarParadasUseCase>();
+
         // Consultas públicas
         services.AddScoped<GetConductoresOperablesUseCase>();
         services.AddScoped<GetDocumentosPorVencerUseCase>();
@@ -100,6 +143,11 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CreateVehiculoInputDto>, CreateVehiculoValidator>();
         services.AddScoped<IValidator<UpdateVehiculoInputDto>, UpdateVehiculoValidator>();
         services.AddScoped<IValidator<UpdateTipoDocumentoInputDto>, UpdateTipoDocumentoValidator>();
+        services.AddScoped<IValidator<CreateRutaInputDto>, CreateRutaValidator>();
+        services.AddScoped<IValidator<UpdateRutaInputDto>, UpdateRutaValidator>();
+        services.AddScoped<IValidator<CreateParadaInputDto>, CreateParadaValidator>();
+        services.AddScoped<IValidator<UpdateParadaInputDto>, UpdateParadaValidator>();
+        services.AddScoped<IValidator<RegistrarLicenciaConductorInputDto>, RegistrarLicenciaConductorValidator>();
 
         return services;
     }

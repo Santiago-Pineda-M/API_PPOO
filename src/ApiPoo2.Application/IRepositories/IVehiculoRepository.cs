@@ -15,6 +15,13 @@ public interface IVehiculoRepository
     Task<IReadOnlyList<Vehiculo>> GetAllWithDetailsAsync(
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    ///     Igual que <see cref="GetAllWithDetailsAsync" /> pero con seguimiento de cambios, para que la
+    ///     tarea programada pueda marcar documentos vencidos y persistirlos.
+    /// </summary>
+    Task<IReadOnlyList<Vehiculo>> GetAllWithDetailsForUpdateAsync(
+        CancellationToken cancellationToken = default);
+
     void Add(Vehiculo vehiculo);
 
     void Remove(Vehiculo vehiculo);
