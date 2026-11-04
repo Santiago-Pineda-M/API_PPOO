@@ -21,10 +21,13 @@ public sealed class RutaTests
             "Terminal de Ibagué",
             null,
             null,
+            "Aeropuerto Perales",
+            null,
+            null,
             Ahora);
 
     [Fact]
-    public void Registrar_CreaLaParadaInicialEnOrdenCero()
+    public void Registrar_CreaLaParadaInicialYLaFinal()
     {
         var ruta = CrearRuta();
 
@@ -32,12 +35,30 @@ public sealed class RutaTests
         ruta.PersonaId.Should().Be(PersonaId);
         ruta.VehiculoId.Should().Be(VehiculoId);
         ruta.LoginUsuario.Value.Should().Be("admin");
-        ruta.CantidadParadas().Should().Be(1);
-        ruta.Paradas.Single().OrdenParada.Should().Be(ReglasParada.OrdenInicial);
-        ruta.Paradas.Single().Ubicacion.Value.Should().Be("Terminal de Ibagué");
+        ruta.CantidadParadas().Should().Be(2);
+        ruta.Paradas.Single(p => p.EsInicial()).Ubicacion.Value.Should().Be("Terminal de Ibagué");
+        ruta.Paradas.Single(p => p.OrdenParada == ReglasParada.OrdenFinalMinimo)
+            .Ubicacion.Value.Should().Be("Aeropuerto Perales");
         ruta.CreatedAtUtc.Should().Be(Ahora);
         ruta.UpdatedAtUtc.Should().BeNull();
     }
+
+    [Fact]
+    public void Registrar_RechazaParadaFinalVacia()
+        => FluentActions.Invoking(() => Ruta.Registrar(
+                "R-001",
+                PersonaId,
+                VehiculoId,
+                "admin",
+                "Terminal",
+                null,
+                null,
+                "  ",
+                null,
+                null,
+                Ahora))
+            .Should().Throw<DomainValidationException>()
+            .Which.Code.Should().Be("parada.ubicacion.requerida");
 
     [Fact]
     public void Registrar_NormalizaElCodigoAMayusculas()
@@ -57,6 +78,9 @@ public sealed class RutaTests
                 "Terminal",
                 null,
                 null,
+                "Destino",
+                null,
+                null,
                 Ahora))
             .Should().Throw<DomainValidationException>()
             .Which.Code.Should().Be("ruta.conductor");
@@ -71,6 +95,9 @@ public sealed class RutaTests
                 "Terminal",
                 null,
                 null,
+                "Destino",
+                null,
+                null,
                 Ahora))
             .Should().Throw<DomainValidationException>()
             .Which.Code.Should().Be("ruta.vehiculo");
@@ -80,10 +107,10 @@ public sealed class RutaTests
     {
         var ruta = CrearRuta();
 
-        var parada = ruta.AgregarParada("Plaza de Bolívar", 1, 4.4389, -75.2322, Ahora.AddMinutes(1));
+        var parada = ruta.AgregarParada("Plaza de Bolívar", 2, 4.4389, -75.2322, Ahora.AddMinutes(1));
 
-        ruta.CantidadParadas().Should().Be(2);
-        parada.OrdenParada.Should().Be(1);
+        ruta.CantidadParadas().Should().Be(3);
+        parada.OrdenParada.Should().Be(2);
         parada.Latitud.Should().Be(4.4389);
         parada.Longitud.Should().Be(-75.2322);
         ruta.UpdatedAtUtc.Should().Be(Ahora.AddMinutes(1));
@@ -116,7 +143,7 @@ public sealed class RutaTests
     {
         var ruta = CrearRuta();
 
-        for (var orden = 1; orden <= ReglasParada.OrdenMaximo; orden++)
+        for (var orden = 2; orden <= ReglasParada.OrdenMaximo; orden++)
         {
             ruta.AgregarParada($"Parada {orden}", orden, null, null, Ahora);
         }
@@ -132,12 +159,12 @@ public sealed class RutaTests
     public void ActualizarParada_CambiaUbicacionOrdenYCoordenadas()
     {
         var ruta = CrearRuta();
-        var parada = ruta.AgregarParada("Plaza", 1, null, null, Ahora);
+        var parada = ruta.AgregarParada("Plaza", 2, null, null, Ahora);
 
-        ruta.ActualizarParada(parada.Id, "Mercado", 2, 4.5, -75.2, Ahora.AddMinutes(2));
+        ruta.ActualizarParada(parada.Id, "Mercado", 3, 4.5, -75.2, Ahora.AddMinutes(2));
 
         parada.Ubicacion.Value.Should().Be("Mercado");
-        parada.OrdenParada.Should().Be(2);
+        parada.OrdenParada.Should().Be(3);
         parada.Latitud.Should().Be(4.5);
         ruta.UpdatedAtUtc.Should().Be(Ahora.AddMinutes(2));
     }
@@ -157,7 +184,7 @@ public sealed class RutaTests
     public void ActualizarParada_RechazaOrdenOcupadoPorOtraParada()
     {
         var ruta = CrearRuta();
-        var segunda = ruta.AgregarParada("Plaza", 1, null, null, Ahora);
+        var segunda = ruta.AgregarParada("Plaza", 2, null, null, Ahora);
 
         var act = () => ruta.ActualizarParada(segunda.Id, "Mercado", ReglasParada.OrdenInicial, null, null, Ahora);
 
@@ -169,11 +196,11 @@ public sealed class RutaTests
     public void EliminarParada_QuitaUnaParadaNoInicial()
     {
         var ruta = CrearRuta();
-        var parada = ruta.AgregarParada("Plaza", 1, null, null, Ahora);
+        var parada = ruta.AgregarParada("Plaza", 2, null, null, Ahora);
 
         ruta.EliminarParada(parada.Id, Ahora.AddMinutes(1));
 
-        ruta.CantidadParadas().Should().Be(1);
+        ruta.CantidadParadas().Should().Be(2);
         ruta.BuscarParada(parada.Id).Should().BeNull();
     }
 
@@ -181,7 +208,7 @@ public sealed class RutaTests
     public void EliminarParada_RechazaLaParadaInicial()
     {
         var ruta = CrearRuta();
-        var inicial = ruta.Paradas.Single();
+        var inicial = ruta.Paradas.Single(p => p.EsInicial());
 
         var act = () => ruta.EliminarParada(inicial.Id, Ahora);
 
@@ -204,7 +231,7 @@ public sealed class RutaTests
     public void AsignarCoordenadas_ActualizaLaParadaYLaRuta()
     {
         var ruta = CrearRuta();
-        var parada = ruta.Paradas.Single();
+        var parada = ruta.Paradas.First();
 
         ruta.AsignarCoordenadas(parada.Id, 4.4389, -75.2322, Ahora.AddMinutes(5));
 
@@ -271,14 +298,22 @@ public sealed class RutaTests
     }
 
     [Fact]
-    public void EstaCompleta_RequiereParadaFinalDistintaDeLaInicial()
+    public void EstaCompleta_EsVerdaderaDesdeElRegistroDeLaRuta()
     {
         var ruta = CrearRuta();
-        ruta.EstaCompleta().Should().BeFalse();
-
-        ruta.AgregarParada("Destino", 1, null, null, Ahora);
 
         ruta.EstaCompleta().Should().BeTrue();
+    }
+
+    [Fact]
+    public void EstaCompleta_EsFalsaSiSoloQuedaLaParadaInicial()
+    {
+        var ruta = CrearRuta();
+        var final = ruta.Paradas.Single(p => !p.EsInicial());
+
+        ruta.EliminarParada(final.Id, Ahora.AddMinutes(1));
+
+        ruta.EstaCompleta().Should().BeFalse();
     }
 
     [Fact]

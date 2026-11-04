@@ -8,9 +8,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ApiPoo2.WebApi.Controllers;
 
+/// <summary>
+///     La consulta de una parada es una lectura del enunciado de E3 (solo token); las escrituras
+///     mantienen token + APIKey.
+/// </summary>
 [ApiController]
 [Route("api/paradas")]
-[Authorize(Policy = ApiKeyRequirement.PolicyName)]
+[Authorize]
 public sealed class ParadasController : ControllerBase
 {
     private readonly GetParadaUseCase _get;
@@ -33,6 +37,7 @@ public sealed class ParadasController : ControllerBase
         CancellationToken cancellationToken)
         => Ok(await _get.ExecuteAsync(new GetParadaInputDto(id), cancellationToken));
 
+    [Authorize(Policy = ApiKeyRequirement.PolicyName)]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ParadaOutputDto>> Update(
         [FromRoute] Guid id,
@@ -47,6 +52,7 @@ public sealed class ParadasController : ControllerBase
                 body.Longitud),
             cancellationToken));
 
+    [Authorize(Policy = ApiKeyRequirement.PolicyName)]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(
         [FromRoute] Guid id,

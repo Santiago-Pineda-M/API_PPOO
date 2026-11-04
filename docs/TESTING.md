@@ -151,9 +151,9 @@ dotnet test tests/ApiPoo2.DomainTests \
 | Capa | Umbral mínimo | Cobertura actual |
 |---|---|---|
 | Domain | **90 %** líneas | 95.9 % |
-| Application | **50 %** líneas | 54.3 % |
+| Application | **50 %** líneas | 55.5 % |
 | Infrastructure | **5 %** líneas | 5.0 % |
-| WebApi | **15 %** líneas | 15.4 % |
+| WebApi | **15 %** líneas | 15.1 % |
 
 `IntegrationTests` **no** entra en el gate: mide la app completa con base de
 datos y sus cifras no son comparables con las suites unitarias.

@@ -10,6 +10,9 @@ public static class ReglasParada
 {
     public const int OrdenInicial = 0;
 
+    /// <summary>Orden de la parada final con la que nace toda ruta: inicial 0, final 1.</summary>
+    public const int OrdenFinalMinimo = 1;
+
     public const int OrdenMaximo = 6;
 
     public const int MaximoParadasPorRuta = 7;

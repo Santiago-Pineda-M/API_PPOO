@@ -55,7 +55,7 @@ Reglas adicionales y su enforcement (ArchitectureTests/LayerDependencyTests):
   - `User.MaxActiveRefreshTokens = 10` (al emitir el número 11, se revoca el más antiguo con `SessionLimitReached`).
   - `RefreshToken.MaxLifetime = 7 días` (`RefreshToken.Issue` rechaza TTL mayores).
   - `ReglasParada`: orden 0–6, máximo 7 paradas, 0 es la inicial y el mayor la final.
-  - `Ruta`: parada inicial obligatoria, orden único, reasignación validada, coordenadas ambas o ninguna.
+  - `Ruta`: parada inicial (orden 0) y final (orden 1) obligatorias al crear, orden único, reasignación validada, coordenadas ambas o ninguna.
   - `Persona`: licencia de conducción opcional (bytes + vigencia) solo para `CONDUCTOR`; `LicenciaVigente`.
   - `DocumentoVehiculo.MarcarVencido` persiste `VENCIDO`; `ConductorVehiculo.Restringir` fuerza `RO` (idempotente).
 - Excepciones de dominio: `DomainException`, `DomainValidationException` (con `code` + errores).

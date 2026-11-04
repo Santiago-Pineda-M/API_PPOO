@@ -21,7 +21,7 @@ public sealed class RutasParadasApiTests
     }
 
     [Fact]
-    public async Task Ruta_CreaConParadaInicialYPermiteCrudCompleto()
+    public async Task Ruta_CreaConParadasInicialYFinalYPermiteCrudCompleto()
     {
         await AutenticarComoSemillaAsync();
         var contexto = await PrepararConductorAptoAsync();
@@ -33,6 +33,7 @@ public sealed class RutasParadasApiTests
             personaId = contexto.PersonaId,
             vehiculoId = contexto.VehiculoId,
             ubicacionInicial = "Terminal Norte",
+            ubicacionFinal = "Destino",
             latitud = 6.2442,
             longitud = -75.5812
         }));
@@ -44,16 +45,18 @@ public sealed class RutasParadasApiTests
         var creada = await ReadAs<RutaDto>(creacion);
         creada.CodigoRuta.Should().Be(codigo);
         creada.Operable.Should().BeTrue();
-        creada.Paradas.Should().ContainSingle(p => p.OrdenParada == 0);
+        creada.Paradas.Select(p => p.OrdenParada).Should().Equal(0, 1);
+        creada.Paradas.Single(p => p.OrdenParada == 0).Ubicacion.Should().Be("Terminal Norte");
+        creada.Paradas.Single(p => p.OrdenParada == 1).Ubicacion.Should().Be("Destino");
 
         var detalle = await _client.GetAsync($"/api/rutas/{codigo}");
         detalle.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadAs<RutaDto>(detalle)).Paradas.Should().HaveCount(1);
+        (await ReadAs<RutaDto>(detalle)).Paradas.Should().HaveCount(2);
 
         var agregada = await _client.PostAsync($"/api/rutas/{codigo}/paradas", Json(new
         {
             ubicacion = "Parque Principal",
-            ordenParada = 1,
+            ordenParada = 2,
             latitud = 6.2518,
             longitud = -75.5636
         }));
@@ -62,12 +65,12 @@ public sealed class RutasParadasApiTests
         agregada.Headers.Location!.ToString().Should().Contain("/api/paradas/");
 
         var parada = await ReadAs<ParadaDto>(agregada);
-        parada.OrdenParada.Should().Be(1);
+        parada.OrdenParada.Should().Be(2);
 
         var listadoParadas = await ReadAs<List<ParadaDto>>(
             await _client.GetAsync($"/api/rutas/{codigo}/paradas"));
 
-        listadoParadas.Should().HaveCount(2);
+        listadoParadas.Should().HaveCount(3);
         listadoParadas.Select(p => p.OrdenParada).Should().BeInAscendingOrder();
 
         (await ReadAs<List<RutaResumenDto>>(await _client.GetAsync($"/api/rutas?codigo={codigo}")))
@@ -122,6 +125,7 @@ public sealed class RutasParadasApiTests
             personaId = contexto.PersonaId,
             vehiculoId = contexto.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
         primera.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -131,6 +135,7 @@ public sealed class RutasParadasApiTests
             personaId = contexto.PersonaId,
             vehiculoId = contexto.VehiculoId,
             ubicacionInicial = "Origen duplicado",
+            ubicacionFinal = "Destino",
         }));
 
         duplicada.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -149,6 +154,7 @@ public sealed class RutasParadasApiTests
             personaId = contexto.PersonaId,
             vehiculoId = contexto.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
 
         respuesta.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -173,6 +179,7 @@ public sealed class RutasParadasApiTests
             personaId = administrativo.Id,
             vehiculoId = vehiculo.Id,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
 
         respuesta.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -193,6 +200,7 @@ public sealed class RutasParadasApiTests
             personaId = original.PersonaId,
             vehiculoId = original.VehiculoId,
             ubicacionInicial = "Terminal Norte",
+            ubicacionFinal = "Destino",
         }));
         creacion.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -232,6 +240,7 @@ public sealed class RutasParadasApiTests
             personaId = original.PersonaId,
             vehiculoId = original.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
         creacion.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -259,6 +268,7 @@ public sealed class RutasParadasApiTests
             personaId = original.PersonaId,
             vehiculoId = original.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
         creacion.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -291,6 +301,7 @@ public sealed class RutasParadasApiTests
             personaId = original.PersonaId,
             vehiculoId = original.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
         creacion.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -321,6 +332,7 @@ public sealed class RutasParadasApiTests
             personaId = contexto.PersonaId,
             vehiculoId = contexto.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
         creacion.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -347,11 +359,12 @@ public sealed class RutasParadasApiTests
             personaId = contexto.PersonaId,
             vehiculoId = contexto.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
         creacion.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var creada = await ReadAs<RutaDto>(creacion);
-        var inicial = creada.Paradas.Single();
+        var inicial = creada.Paradas.Single(p => p.OrdenParada == 0);
 
         var eliminacion = await _client.DeleteAsync($"/api/paradas/{inicial.Id}");
 
@@ -372,20 +385,58 @@ public sealed class RutasParadasApiTests
             personaId = contexto.PersonaId,
             vehiculoId = contexto.VehiculoId,
             ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
         }));
         creacion.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var respuesta = await _client.PostAsync($"/api/rutas/{codigo}/paradas", Json(new
         {
             ubicacion = "Sin longitud",
-            ordenParada = 1,
+            ordenParada = 2,
             latitud = 6.24,
         }));
 
         respuesta.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task Ruta_ConsultasPorConductorYPlacaDevuelvenSoloLoPedido()
+    {
+        await AutenticarComoSemillaAsync();
+        var contexto = await PrepararConductorAptoAsync();
+        var codigo = CodigoUnico();
+
+        var creacion = await _client.PostAsync("/api/rutas", Json(new
+        {
+            codigoRuta = codigo,
+            personaId = contexto.PersonaId,
+            vehiculoId = contexto.VehiculoId,
+            ubicacionInicial = "Origen",
+            ubicacionFinal = "Destino",
+        }));
+        creacion.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Las consultas de rutas exigen token, no APIKey: se retira el encabezado a propósito.
+        _client.DefaultRequestHeaders.Remove(ApiKeyRequirement.HeaderName);
+
+        var porConductor = await _client.GetAsync(
+            $"/api/rutas/conductor/{contexto.NumeroIdentificacion}");
+
+        porConductor.StatusCode.Should().Be(
+            HttpStatusCode.OK, await porConductor.Content.ReadAsStringAsync());
+        (await ReadAs<List<string>>(porConductor)).Should().Equal(codigo);
+
+        var porPlaca = await _client.GetAsync($"/api/rutas/placa/{contexto.Placa}");
+
+        porPlaca.StatusCode.Should().Be(HttpStatusCode.OK, await porPlaca.Content.ReadAsStringAsync());
+        var parejas = await ReadAs<List<RutaConductorDto>>(porPlaca);
+        parejas.Should().ContainSingle().Which.CodigoRuta.Should().Be(codigo);
+        parejas.Single().Conductor.Should().NotBeNullOrWhiteSpace();
+    }
+
     private sealed record ContextoRuta(Guid PersonaId, Guid VehiculoId, string Placa, string NumeroIdentificacion);
+
+    private sealed record RutaConductorDto(string CodigoRuta, string Conductor);
 
     private async Task<ContextoRuta> PrepararConductorAptoAsync(bool registrarLicencia = true)
     {

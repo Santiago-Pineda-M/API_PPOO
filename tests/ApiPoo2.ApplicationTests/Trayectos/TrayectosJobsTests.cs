@@ -199,8 +199,9 @@ public sealed class TrayectosJobsTests
             .ExecuteAsync(new SinParametros(), CancellationToken.None);
 
         asignadas.Should().Be(1);
-        ruta.Paradas.Single().Latitud.Should().Be(4.4389);
-        ruta.Paradas.Single().Longitud.Should().Be(-75.2322);
+        var geocodificada = ruta.Paradas.Single(p => p.Ubicacion.Value == "Terminal de Ibagué");
+        geocodificada.Latitud.Should().Be(4.4389);
+        geocodificada.Longitud.Should().Be(-75.2322);
         unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
@@ -213,7 +214,7 @@ public sealed class TrayectosJobsTests
             .ExecuteAsync(new SinParametros(), CancellationToken.None);
 
         asignadas.Should().Be(0);
-        ruta.Paradas.Single().TieneCoordenadas().Should().BeFalse();
+        ruta.Paradas.Should().OnlyContain(p => !p.TieneCoordenadas());
         unitOfWork.SaveChangesCalls.Should().Be(0);
     }
 
@@ -221,8 +222,8 @@ public sealed class TrayectosJobsTests
     public async Task GeocodificarParadas_ElServicioFalla_ContinuaConLasDemas()
     {
         var ruta = DominioDePrueba.RutaOperable("R-001", "Terminal");
-        ruta.AgregarParada("Plaza", 1, null, null, Ahora);
-        ruta.AgregarParada("Mercado", 2, null, null, Ahora);
+        ruta.AgregarParada("Plaza", 2, null, null, Ahora);
+        ruta.AgregarParada("Mercado", 3, null, null, Ahora);
         var rutas = new FakeRutaRepository();
         rutas.Add(ruta);
 
@@ -235,14 +236,19 @@ public sealed class TrayectosJobsTests
             .ExecuteAsync(new SinParametros(), CancellationToken.None);
 
         asignadas.Should().Be(0);
-        geocoding.Consultas.Should().HaveCount(3);
+        geocoding.Consultas.Should().HaveCount(4);
     }
 
     [Fact]
     public async Task GeocodificarParadas_SinPendientes_NoConsultaElServicio()
     {
         var ruta = DominioDePrueba.RutaOperable("R-001", "Terminal");
-        ruta.AsignarCoordenadas(ruta.Paradas.Single().Id, 4.4, -75.2, Ahora);
+
+        foreach (var parada in ruta.Paradas.ToList())
+        {
+            ruta.AsignarCoordenadas(parada.Id, 4.4, -75.2, Ahora);
+        }
+
         var rutas = new FakeRutaRepository();
         rutas.Add(ruta);
         var geocoding = new FakeGeocodingService();

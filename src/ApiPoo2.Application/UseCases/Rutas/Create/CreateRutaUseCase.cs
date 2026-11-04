@@ -67,6 +67,9 @@ public sealed class CreateRutaUseCase : BaseUseCase<CreateRutaInputDto, RutaCons
             request.UbicacionInicial,
             request.Latitud,
             request.Longitud,
+            request.UbicacionFinal,
+            request.LatitudFinal,
+            request.LongitudFinal,
             ahora);
 
         _rutaRepository.Add(ruta);

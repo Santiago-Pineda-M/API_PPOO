@@ -4,6 +4,8 @@ using ApiPoo2.Application.UseCases.Rutas.Create;
 using ApiPoo2.Application.UseCases.Rutas.Delete;
 using ApiPoo2.Application.UseCases.Rutas.Get;
 using ApiPoo2.Application.UseCases.Rutas.List;
+using ApiPoo2.Application.UseCases.Rutas.PorConductor;
+using ApiPoo2.Application.UseCases.Rutas.PorPlaca;
 using ApiPoo2.Application.UseCases.Rutas.Update;
 using ApiPoo2.ApplicationTests.Common.TestDoubles;
 using ApiPoo2.Domain.Common;
@@ -83,10 +85,13 @@ public sealed class RutasUseCaseTests
             "Terminal de Ibagué",
             null,
             null,
+            "Aeropuerto Perales",
+            null,
+            null,
             "admin");
 
     [Fact]
-    public async Task CreateRuta_RutaOperable_CreaLaParadaInicialYPersiste()
+    public async Task CreateRuta_RutaOperable_CreaLasParadasInicialYFinalYPersiste()
     {
         var escenario = CrearEscenario();
         var useCase = CrearCreate(escenario);
@@ -100,8 +105,7 @@ public sealed class RutasUseCaseTests
         resultado.LoginUsuario.Should().Be("admin");
         resultado.Operable.Should().BeTrue();
         resultado.MotivoNoOperable.Should().BeNull();
-        resultado.Paradas.Should().ContainSingle()
-            .Which.OrdenParada.Should().Be(0);
+        resultado.Paradas.Select(p => p.OrdenParada).Should().Equal(0, 1);
         escenario.Rutas.Items.Should().ContainSingle();
         escenario.UnitOfWork.SaveChangesCalls.Should().Be(1);
     }
@@ -166,6 +170,9 @@ public sealed class RutasUseCaseTests
                 "Terminal",
                 null,
                 null,
+                "Destino",
+                null,
+                null,
                 "admin"),
             CancellationToken.None);
 
@@ -187,6 +194,9 @@ public sealed class RutasUseCaseTests
                 sinLicencia.Id,
                 escenario.Vehiculo.Id,
                 "Terminal",
+                null,
+                null,
+                "Destino",
                 null,
                 null,
                 "admin"),
@@ -230,6 +240,9 @@ public sealed class RutasUseCaseTests
                 escenario.Persona.Id,
                 sinDocumentos.Id,
                 "Terminal",
+                null,
+                null,
+                "Destino",
                 null,
                 null,
                 "admin"),
@@ -310,7 +323,7 @@ public sealed class RutasUseCaseTests
     public async Task GetRuta_Existente_DevuelveElDetalleConParadas()
     {
         var ruta = DominioDePrueba.RutaOperable("R-001", "Terminal");
-        ruta.AgregarParada("Destino", 1, null, null, Ahora);
+        ruta.AgregarParada("Destino", 2, null, null, Ahora);
         var rutas = new FakeRutaRepository();
         rutas.Add(ruta);
 
@@ -323,7 +336,7 @@ public sealed class RutasUseCaseTests
         var resultado = await useCase.ExecuteAsync(new GetRutaInputDto("R-001"), CancellationToken.None);
 
         resultado.CodigoRuta.Should().Be("R-001");
-        resultado.Paradas.Should().HaveCount(2);
+        resultado.Paradas.Should().HaveCount(3);
         resultado.Operable.Should().BeTrue();
     }
 
@@ -369,6 +382,71 @@ public sealed class RutasUseCaseTests
 
         rutas.Items.Should().BeEmpty();
         unitOfWork.SaveChangesCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ListRutasPorConductor_DevuelveSoloLosCodigosAgrupados()
+    {
+        var ruta = DominioDePrueba.RutaOperable("R-001");
+        var rutas = new FakeRutaRepository();
+        rutas.Add(ruta);
+        rutas.Add(DominioDePrueba.RutaDelMismoConductor("R-002", ruta));
+        var personas = new FakePersonaRepository();
+        personas.Add(ruta.Persona);
+
+        var useCase = new ListRutasPorConductorUseCase(
+            [new ListRutasPorConductorValidator()],
+            TestData.LoggerFactory,
+            personas,
+            rutas);
+
+        var codigos = await useCase.ExecuteAsync(
+            new ListRutasPorConductorInputDto(ruta.Persona.NumeroIdentificacion.Value),
+            CancellationToken.None);
+
+        codigos.Should().Equal("R-001", "R-002");
+    }
+
+    [Fact]
+    public async Task ListRutasPorConductor_SinRutas_DevuelveListaVacia()
+    {
+        var personas = new FakePersonaRepository();
+
+        var useCase = new ListRutasPorConductorUseCase(
+            [new ListRutasPorConductorValidator()],
+            TestData.LoggerFactory,
+            personas,
+            new FakeRutaRepository());
+
+        var codigos = await useCase.ExecuteAsync(
+            new ListRutasPorConductorInputDto("9999999999"),
+            CancellationToken.None);
+
+        codigos.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ListRutasPorPlaca_DevuelveCodigoYConductor()
+    {
+        var ruta = DominioDePrueba.RutaOperable("R-001");
+        var rutas = new FakeRutaRepository();
+        rutas.Add(ruta);
+
+        var useCase = new ListRutasPorPlacaUseCase(
+            [new ListRutasPorPlacaValidator()],
+            TestData.LoggerFactory,
+            rutas);
+
+        var resultado = await useCase.ExecuteAsync(
+            new ListRutasPorPlacaInputDto(ruta.Vehiculo.Placa.Value),
+            CancellationToken.None);
+
+        resultado.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new
+            {
+                CodigoRuta = "R-001",
+                Conductor = $"{ruta.Persona.Nombres.Value} {ruta.Persona.Apellidos.Value}"
+            });
     }
 
     [Fact]

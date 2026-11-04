@@ -9,6 +9,9 @@ public sealed record CreateRutaInputDto(
     string UbicacionInicial,
     double? Latitud,
     double? Longitud,
+    string UbicacionFinal,
+    double? LatitudFinal,
+    double? LongitudFinal,
     string? LoginUsuario = null);
 // El login lo inyecta el controlador desde el token (`request with { LoginUsuario = ... }`);
 // nunca se toma del cuerpo de la petición. Es nullable para que el binding no lo exija y el
@@ -32,6 +35,17 @@ public sealed class CreateRutaValidator : AbstractValidator<CreateRutaInputDto>
             .NotEmpty().WithMessage("La ubicación inicial es obligatoria.")
             .MaximumLength(200).WithMessage("La ubicación no puede superar los 200 caracteres.");
 
+        RuleFor(x => x.UbicacionFinal)
+            .NotEmpty().WithMessage("La ubicación final es obligatoria.")
+            .MaximumLength(200).WithMessage("La ubicación no puede superar los 200 caracteres.");
+
+        RuleFor(x => x)
+            .Must(x => !string.Equals(
+                x.UbicacionInicial?.Trim(),
+                x.UbicacionFinal?.Trim(),
+                StringComparison.OrdinalIgnoreCase))
+            .WithMessage("La parada final debe ser distinta de la inicial.");
+
         RuleFor(x => x.LoginUsuario)
             .NotEmpty().WithMessage("No se pudo determinar el usuario que registra la ruta.")
             .MaximumLength(64).WithMessage("El login del usuario no puede superar los 64 caracteres.");
@@ -47,5 +61,17 @@ public sealed class CreateRutaValidator : AbstractValidator<CreateRutaInputDto>
         RuleFor(x => x)
             .Must(x => x.Latitud.HasValue == x.Longitud.HasValue)
             .WithMessage("La latitud y la longitud deben informarse juntas o no informarse.");
+
+        RuleFor(x => x.LatitudFinal)
+            .InclusiveBetween(-90d, 90d).When(x => x.LatitudFinal.HasValue)
+            .WithMessage("La latitud final debe estar entre -90 y 90.");
+
+        RuleFor(x => x.LongitudFinal)
+            .InclusiveBetween(-180d, 180d).When(x => x.LongitudFinal.HasValue)
+            .WithMessage("La longitud final debe estar entre -180 y 180.");
+
+        RuleFor(x => x)
+            .Must(x => x.LatitudFinal.HasValue == x.LongitudFinal.HasValue)
+            .WithMessage("La latitud y la longitud finales deben informarse juntas o no informarse.");
     }
 }

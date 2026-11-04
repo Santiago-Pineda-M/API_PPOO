@@ -177,9 +177,13 @@ curl http://localhost:5114/api/vehiculos/placa/ABC123 \
 | `GET` | `/api/vehiculos/placa/{placa}` | JWT + APIKey | Vehículo por placa con conductores y documentos |
 | `GET`/`POST`/`PUT`/`DELETE` | `/api/tipos-documento`, `/api/tipos-documento/{id}` | JWT + APIKey | Catálogo de documentos paramétricos |
 | `POST`/`PUT` | `/api/conductores/vehiculos`, `/api/conductores/estado` | JWT + APIKey | Asociación conductor–vehículo |
-| `GET`/`POST`/`PUT`/`DELETE` | `/api/rutas`, `/api/rutas/{codigoRuta}` | JWT + APIKey | Rutas: alta con parada inicial, consulta con filtros, reasignación y baja en cascada |
-| `GET`/`POST` | `/api/rutas/{codigoRuta}/paradas` | JWT + APIKey | Paradas ordenadas de una ruta (orden 0–6, máximo 7) |
-| `GET`/`PUT`/`DELETE` | `/api/paradas/{id}` | JWT + APIKey | Detalle, edición y baja de una parada |
+| `GET` | `/api/rutas`, `/api/rutas/{codigoRuta}` | JWT | Consulta de rutas con filtros y de una ruta con sus paradas ordenadas |
+| `GET` | `/api/rutas/conductor/{numero}`, `/api/rutas/placa/{placa}` | JWT | Solo códigos del conductor, y código + conductor del vehículo |
+| `POST`/`PUT`/`DELETE` | `/api/rutas`, `/api/rutas/{codigoRuta}` | JWT + APIKey | Rutas: alta con parada inicial y final, reasignación y baja en cascada |
+| `GET` | `/api/rutas/{codigoRuta}/paradas` | JWT | Paradas ordenadas de una ruta (orden 0–6, máximo 7) |
+| `POST` | `/api/rutas/{codigoRuta}/paradas` | JWT + APIKey | Agrega una parada intermedia (orden 2–6) |
+| `GET` | `/api/paradas/{id}` | JWT | Detalle de una parada |
+| `PUT`/`DELETE` | `/api/paradas/{id}` | JWT + APIKey | Edición y baja de una parada |
 | `GET`/`PUT`/`DELETE` | `/api/personas/{id}/licencia` | JWT + APIKey | Licencia de conducción (metadatos, UPSERT en Base64, baja) |
 | `POST` | `/api/cargues` | JWT + APIKey | Cargue masivo de trayectos desde Excel `.xlsx` |
 | `GET`/`DELETE` | `/api/cargues`, `/api/cargues/{idCargue}` | JWT + APIKey | Resúmenes, filas con observaciones y purga de la staging |

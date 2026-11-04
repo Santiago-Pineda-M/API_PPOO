@@ -626,10 +626,28 @@ public static class DominioDePrueba
             ubicacionInicial,
             null,
             null,
+            "Destino",
+            null,
+            null,
             TestData.Ahora);
 
         return ruta.ConNavegaciones(persona, vehiculo);
     }
+
+    /// <summary>Otra ruta del mismo conductor y vehículo, para agrupar varias por consulta.</summary>
+    public static Ruta RutaDelMismoConductor(string codigo, Ruta original)
+        => Ruta.Registrar(
+            codigo,
+            original.PersonaId,
+            original.VehiculoId,
+            "admin",
+            original.Paradas.Single(p => p.EsInicial()).Ubicacion.Value,
+            null,
+            null,
+            "Destino",
+            null,
+            null,
+            TestData.Ahora).ConNavegaciones(original.Persona, original.Vehiculo);
 }
 
 public static class RutaTestExtensions

@@ -493,11 +493,15 @@ Criterio:
 El "trayecto" del enunciado se modela normalizado: `Ruta` (cabecera con código, conductor,
 vehículo y login) + `Parada` (detalle ordenado 0–6). Cada dato vive una sola vez.
 
-## F-E3-RUT-01 — Crear ruta con parada inicial
+## F-E3-RUT-01 — Crear ruta con parada inicial y final
 
 - `POST /api/rutas` (JWT + APIKey) → `201` + `Location: /api/rutas/{codigoRuta}`.
-- Entradas: `codigoRuta`, `personaId`, `vehiculoId`, `ubicacionInicial`, `latitud?`, `longitud?`.
-  El login sale del token, nunca del cuerpo.
+- Entradas: `codigoRuta`, `personaId`, `vehiculoId`, `ubicacionInicial`, `latitud?`, `longitud?`,
+  `ubicacionFinal`, `latitudFinal?`, `longitudFinal?`. El login sale del token, nunca del cuerpo.
+- El enunciado exige **como mínimo una parada inicial y una final**, así que la ruta nace con las
+  dos (inicial en orden 0, final en orden 1) y no existe una ruta con una sola parada. Las paradas
+  intermedias se agregan después con órdenes 2–6, y la final pasa a ser la de mayor orden.
+- La final debe ser distinta de la inicial y ninguna ubicación puede ir vacía (`400`).
 - Valida conductor `CONDUCTOR` con licencia vigente, asociación en `PO` y todos los documentos
   del vehículo `HABILITADO` y no vencidos.
 - Códigos: `ruta.codigo.conflict` (409), `ruta.conductor.invalido` (403),
@@ -507,6 +511,7 @@ vehículo y login) + `Parada` (detalle ordenado 0–6). Cada dato vive una sola 
 
 - `POST /api/rutas/{codigoRuta}/paradas` → `201` + `Location: /api/paradas/{id}`.
 - Orden 0–6, sin repetir y máximo 7 paradas por ruta (`parada.maximo`, `parada.orden.duplicado` → 409).
+- El orden 0 es la inicial y el 1 la final creadas en el alta: las intermedias usan 2–6.
 
 ## F-E3-RUT-03 — Consultar ruta con paradas ordenadas
 
@@ -550,21 +555,28 @@ vehículo y login) + `Parada` (detalle ordenado 0–6). Cada dato vive una sola 
 
 - `DELETE /api/personas/{id}/licencia` → `204`.
 
+Las consultas de esta sección exigen **solo token**: las escrituras de rutas y paradas mantienen
+la exigencia de token + APIKey de E1/E2.
+
 ## F-E3-CON-01 — Ruta por código
 
-- Cubierta por `GET /api/rutas/{codigoRuta}` (con paradas ordenadas).
+- `GET /api/rutas/{codigoRuta}` (JWT) con las paradas ordenadas y su información.
 
 ## F-E3-CON-02 — Rutas por conductor
 
-- `GET /api/rutas?numeroIdentificacion={numero}`.
+- `GET /api/rutas/conductor/{numeroIdentificacion}` (JWT) → arreglo con **únicamente los códigos
+  de ruta**, agrupados (sin repetir) y ordenados. Conductor inexistente → `200 []`.
+- Se mantiene el filtro equivalente `GET /api/rutas?numeroIdentificacion={numero}`, que devuelve
+  el resumen completo para tableros.
 
 ## F-E3-CON-03 — Rutas por vehículo
 
-- `GET /api/rutas?placa={placa}`.
+- `GET /api/rutas/placa/{placa}` (JWT) → arreglo de `{ codigoRuta, conductor }`, agrupado y ordenado.
+- Filtro equivalente con resumen completo: `GET /api/rutas?placa={placa}`.
 
 ## F-E3-CON-04 — Rutas no operables
 
-- `GET /api/rutas?operable=false` (también `codigo=` y `operable=true`); cada resumen incluye
+- `GET /api/rutas?operable=false` (JWT; también `codigo=` y `operable=true`); cada resumen incluye
   `motivoNoOperable`.
 
 ## F-E3-GEO-01 — Geocodificación de paradas
@@ -573,6 +585,15 @@ vehículo y login) + `Parada` (detalle ordenado 0–6). Cada dato vive una sola 
   `User-Agent` identificable, caché por ubicación) y persiste latitud/longitud con `Ruta.AsignarCoordenadas`.
 - Corrección manual con `PUT /api/paradas/{id}` (no hay endpoint con verbo extra).
 - Proveedor detrás del puerto `IGeocodingService`: se puede cambiar sin tocar casos de uso.
+- **Sustitución declarada y aceptada**: el enunciado pide Google Maps; se cumple con el sustituto
+  Nominatim, que no exige API key ni facturación. Cambiar a Google es implementar otro
+  `IGeocodingService`, sin tocar dominio ni casos de uso.
+
+## F-E3-WEB-01 — Interfaz visual de trayectos y paradas
+
+- El enunciado pide una vista web para visualizar los trayectos/paradas de un código de ruta. Esa
+  interfaz se entrega en el **proyecto cliente** (fuera de este repositorio); esta API expone los
+  datos que consume: `GET /api/rutas/{codigoRuta}` y `GET /api/rutas/{codigoRuta}/paradas`.
 
 ---
 
@@ -700,7 +721,7 @@ Estas tres se garantizan en dominio, casos de uso y pruebas.
 
 - Migraciones generadas por EF Core, sin SQL manual divergente: `InitialSchema`, `AddRutasParadasYLicencias` y `AddCargueTrayectos`.
 - `dotnet build` limpio.
-- Pruebas en verde: 379 dominio + 134 aplicación + 39 infraestructura + 14 arquitectura + 30 WebApi + 37 integración = **633/633**.
+- Pruebas en verde: 381 dominio + 137 aplicación + 39 infraestructura + 14 arquitectura + 30 WebApi + 38 integración = **639/639**.
 - Pruebas de integración contra PostgreSQL local en Docker (`api-poo2-test-db:5433`, `.env.test`), con schema aislado por ejecución; Neon reservado para producción.
 - Base de producción sin datos de prueba antes de la entrega.
 - Colección Postman con los flujos E1–E4 y los casos públicos/protegidos.

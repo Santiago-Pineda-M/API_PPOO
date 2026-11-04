@@ -39,13 +39,13 @@ public sealed class ParadasUseCaseTests
         var (rutas, ruta, unitOfWork) = CrearEscenario();
 
         var resultado = await CrearCreate(rutas, unitOfWork).ExecuteAsync(
-            new CreateParadaInputDto("R-001", "Plaza de Bolívar", 1, 4.4389, -75.2322),
+            new CreateParadaInputDto("R-001", "Plaza de Bolívar", 2, 4.4389, -75.2322),
             CancellationToken.None);
 
-        resultado.OrdenParada.Should().Be(1);
+        resultado.OrdenParada.Should().Be(2);
         resultado.Ubicacion.Should().Be("Plaza de Bolívar");
         resultado.Latitud.Should().Be(4.4389);
-        ruta.CantidadParadas().Should().Be(2);
+        ruta.CantidadParadas().Should().Be(3);
         unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
@@ -79,7 +79,7 @@ public sealed class ParadasUseCaseTests
     {
         var (rutas, ruta, unitOfWork) = CrearEscenario();
 
-        for (var orden = 1; orden <= ReglasParada.OrdenMaximo; orden++)
+        for (var orden = 2; orden <= ReglasParada.OrdenMaximo; orden++)
         {
             ruta.AgregarParada($"Parada {orden}", orden, null, null, Ahora);
         }
@@ -107,14 +107,14 @@ public sealed class ParadasUseCaseTests
     public async Task ListParadas_DevuelveLasParadasOrdenadas()
     {
         var (rutas, ruta, _) = CrearEscenario();
-        ruta.AgregarParada("Segunda", 2, null, null, Ahora);
-        ruta.AgregarParada("Primera", 1, null, null, Ahora);
+        ruta.AgregarParada("Segunda", 3, null, null, Ahora);
+        ruta.AgregarParada("Primera", 2, null, null, Ahora);
 
         var useCase = new ListParadasUseCase([], TestData.LoggerFactory, rutas);
 
         var resultado = await useCase.ExecuteAsync(new ListParadasInputDto("R-001"), CancellationToken.None);
 
-        resultado.Select(p => p.OrdenParada).Should().ContainInOrder(0, 1, 2);
+        resultado.Select(p => p.OrdenParada).Should().ContainInOrder(0, 1, 2, 3);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class ParadasUseCaseTests
     public async Task GetParada_Existente_DevuelveLaParada()
     {
         var (rutas, ruta, _) = CrearEscenario();
-        var parada = ruta.Paradas.Single();
+        var parada = ruta.Paradas.Single(p => p.EsInicial());
 
         var useCase = new GetParadaUseCase([], TestData.LoggerFactory, rutas);
 
@@ -157,7 +157,7 @@ public sealed class ParadasUseCaseTests
     public async Task UpdateParada_CambiaLosDatosYPersiste()
     {
         var (rutas, ruta, unitOfWork) = CrearEscenario();
-        var parada = ruta.AgregarParada("Plaza", 1, null, null, Ahora);
+        var parada = ruta.AgregarParada("Plaza", 3, null, null, Ahora);
         var useCase = new UpdateParadaUseCase(
             [new UpdateParadaValidator()],
             TestData.LoggerFactory,
@@ -196,7 +196,7 @@ public sealed class ParadasUseCaseTests
     public async Task UpdateParada_OrdenOcupado_RechazaConConflict()
     {
         var (rutas, ruta, unitOfWork) = CrearEscenario();
-        var parada = ruta.AgregarParada("Plaza", 1, null, null, Ahora);
+        var parada = ruta.AgregarParada("Plaza", 2, null, null, Ahora);
         var useCase = new UpdateParadaUseCase(
             [],
             TestData.LoggerFactory,
@@ -216,7 +216,7 @@ public sealed class ParadasUseCaseTests
     public async Task DeleteParada_EliminaLaParadaNoInicial()
     {
         var (rutas, ruta, unitOfWork) = CrearEscenario();
-        var parada = ruta.AgregarParada("Plaza", 1, null, null, Ahora);
+        var parada = ruta.AgregarParada("Plaza", 2, null, null, Ahora);
         var useCase = new DeleteParadaUseCase(
             [],
             TestData.LoggerFactory,
@@ -226,7 +226,7 @@ public sealed class ParadasUseCaseTests
 
         await useCase.ExecuteAsync(new DeleteParadaInputDto(parada.Id), CancellationToken.None);
 
-        ruta.CantidadParadas().Should().Be(1);
+        ruta.CantidadParadas().Should().Be(2);
         unitOfWork.SaveChangesCalls.Should().Be(1);
     }
 
@@ -234,7 +234,7 @@ public sealed class ParadasUseCaseTests
     public async Task DeleteParada_Inicial_RechazaConConflict()
     {
         var (rutas, ruta, unitOfWork) = CrearEscenario();
-        var inicial = ruta.Paradas.Single();
+        var inicial = ruta.Paradas.Single(p => p.EsInicial());
         var useCase = new DeleteParadaUseCase(
             [],
             TestData.LoggerFactory,

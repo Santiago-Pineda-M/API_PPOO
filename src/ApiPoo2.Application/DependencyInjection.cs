@@ -13,6 +13,8 @@ using ApiPoo2.Application.UseCases.Rutas.Create;
 using ApiPoo2.Application.UseCases.Rutas.Delete;
 using ApiPoo2.Application.UseCases.Rutas.Get;
 using ApiPoo2.Application.UseCases.Rutas.List;
+using ApiPoo2.Application.UseCases.Rutas.PorConductor;
+using ApiPoo2.Application.UseCases.Rutas.PorPlaca;
 using ApiPoo2.Application.UseCases.Rutas.Update;
 using ApiPoo2.Application.UseCases.TiposDocumento;
 using ApiPoo2.Application.UseCases.Trayectos.Jobs;
@@ -93,6 +95,10 @@ public static class DependencyInjection
         // Rutas (E3)
         services.AddScoped<CreateRutaUseCase>();
         services.AddScoped<ListRutasUseCase>();
+        services.AddScoped<ListRutasPorConductorUseCase>();
+        services.AddScoped<ListRutasPorPlacaUseCase>();
+        services.AddScoped<IValidator<ListRutasPorConductorInputDto>, ListRutasPorConductorValidator>();
+        services.AddScoped<IValidator<ListRutasPorPlacaInputDto>, ListRutasPorPlacaValidator>();
         services.AddScoped<GetRutaUseCase>();
         services.AddScoped<UpdateRutaUseCase>();
         services.AddScoped<DeleteRutaUseCase>();

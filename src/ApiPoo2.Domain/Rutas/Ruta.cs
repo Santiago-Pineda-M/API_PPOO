@@ -30,7 +30,11 @@ public sealed class Ruta : BaseEntity
     {
     }
 
-    /// <summary>Crea la ruta con su parada inicial (orden 0).</summary>
+    /// <summary>
+    ///     Crea la ruta con su parada inicial (orden 0) y su parada final (orden 1). El enunciado
+    ///     exige como mínimo una parada inicial y una final, así que la ruta nunca nace incompleta:
+    ///     las paradas intermedias se agregan después y la final pasa a ser la de mayor orden.
+    /// </summary>
     public static Ruta Registrar(
         string codigoRuta,
         Guid personaId,
@@ -39,6 +43,9 @@ public sealed class Ruta : BaseEntity
         string ubicacionInicial,
         double? latitud,
         double? longitud,
+        string ubicacionFinal,
+        double? latitudFinal,
+        double? longitudFinal,
         DateTime utcNow)
     {
         if (personaId == Guid.Empty)
@@ -61,6 +68,12 @@ public sealed class Ruta : BaseEntity
 
         ruta.Initialize(Guid.NewGuid(), utcNow);
         ruta.AgregarParadaInterna(ubicacionInicial, ReglasParada.OrdenInicial, latitud, longitud, utcNow);
+        ruta.AgregarParadaInterna(
+            ubicacionFinal,
+            ReglasParada.OrdenFinalMinimo,
+            latitudFinal,
+            longitudFinal,
+            utcNow);
 
         return ruta;
     }
