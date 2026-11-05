@@ -32,7 +32,7 @@ public sealed class CarguesController : ControllerBase
     [HttpPost]
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<ActionResult<CargarTrayectosExcelOutputDto>> Cargar(
-        [FromForm] IFormFile? archivo,
+        IFormFile? archivo,
         CancellationToken cancellationToken)
     {
         if (archivo is null)

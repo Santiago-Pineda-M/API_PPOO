@@ -50,16 +50,15 @@ public sealed class RutaRepository : GenericRepository<Ruta>, IRutaRepository
     public async Task<IReadOnlyList<ParadaPendienteGeocodificar>> GetPendientesCoordenadasAsync(
         int limite,
         CancellationToken cancellationToken = default)
-        => await DbSet.AsNoTracking()
-            .SelectMany(ruta => ruta.Paradas
-                .Where(p => p.Latitud == null || p.Longitud == null)
-                .Select(p => new ParadaPendienteGeocodificar(
-                    ruta.Id,
-                    p.Id,
-                    p.Ubicacion.Value,
-                    p.CreatedAtUtc)))
-            .OrderBy(p => p.CreadaUtc)
+        => await DbContext.Set<Parada>().AsNoTracking()
+            .Where(p => p.Latitud == null || p.Longitud == null)
+            .OrderBy(p => p.CreatedAtUtc)
             .Take(limite)
+            .Select(p => new ParadaPendienteGeocodificar(
+                p.IdRuta,
+                p.Id,
+                p.Ubicacion.Value,
+                p.CreatedAtUtc))
             .ToListAsync(cancellationToken);
 
     private IQueryable<Ruta> ConDetalle()

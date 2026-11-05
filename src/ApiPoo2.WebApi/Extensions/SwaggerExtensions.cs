@@ -1,5 +1,6 @@
 using ApiPoo2.WebApi.Auth;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -8,7 +9,6 @@ namespace ApiPoo2.WebApi.Extensions;
 public static class SwaggerExtensions
 {
     public const string BearerSchemeId = "Bearer";
-
     public const string ApiKeySchemeId = "ApiKey";
 
     public static IServiceCollection AddSwaggerWithJwt(this IServiceCollection services)
@@ -45,6 +45,7 @@ public static class SwaggerExtensions
             });
 
             options.OperationFilter<SecurityRequirementsOperationFilter>();
+            options.OperationFilter<MultipartFormDataOperationFilter>();
         });
 
         return services;
