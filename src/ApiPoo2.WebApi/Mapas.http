@@ -1,0 +1,28 @@
+@baseUrl = http://localhost:5114
+@accessToken = PASTE_ACCESS_TOKEN_HERE
+@apiKey = PASTE_APPLICATION_API_KEY_HERE
+
+### Buscar una dirección
+POST {{baseUrl}}/api/mapas/direcciones
+Authorization: Bearer {{accessToken}}
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "consulta": "Parque de los Novios, Bogotá, Colombia",
+  "limite": 5
+}
+
+### Calcular una ruta en automóvil
+POST {{baseUrl}}/api/mapas/rutas
+Authorization: Bearer {{accessToken}}
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "origenLatitud": 4.6584,
+  "origenLongitud": -74.0935,
+  "destinoLatitud": 4.6097,
+  "destinoLongitud": -74.0817,
+  "modo": "drive"
+}

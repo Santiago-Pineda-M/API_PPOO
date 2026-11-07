@@ -1,0 +1,56 @@
+@baseUrl = http://localhost:5114
+@accessToken = PASTE_ACCESS_TOKEN_HERE
+@apiKey = PASTE_APPLICATION_API_KEY_HERE
+@tipoDocumentoId = PASTE_DOCUMENT_TYPE_GUID_HERE
+
+### Registrar persona conductora: tipoIdentificacion 1 = CedulaCiudadania; tipoPersona 2 = Conductor
+POST {{baseUrl}}/api/personas
+Authorization: Bearer {{accessToken}}
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "tipoIdentificacion": 1,
+  "numeroIdentificacion": "9000001234",
+  "nombres": "Ana",
+  "apellidos": "Conductora Demo",
+  "correoElectronico": "ana.conductora.demo@example.com",
+  "tipoPersona": 2
+}
+
+### Crear tipo de documento (copia el id de la respuesta en @tipoDocumentoId para crear el vehiculo)
+POST {{baseUrl}}/api/tipos-documento
+Authorization: Bearer {{accessToken}}
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "codigo": "DEMO-SOAT",
+  "nombre": "SOAT de demostracion",
+  "tiposVehiculoAplicables": "A",
+  "codigoObligatoriedad": "RA",
+  "descripcion": "Documento de prueba para automovil"
+}
+
+### Registrar automovil con documento en Base64
+POST {{baseUrl}}/api/vehiculos
+Authorization: Bearer {{accessToken}}
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "placa": "DEM123",
+  "tipoVehiculo": 1,
+  "tipoServicio": 2,
+  "tipoCombustible": 1,
+  "capacidadPasajeros": 5,
+  "color": "#336699",
+  "modelo": 2024,
+  "marca": "Demo",
+  "linea": "Presentacion",
+  "tipoDocumentoId": "{{tipoDocumentoId}}",
+  "documentoBase64": "JVBERi0xLjQKJUVPRg==",
+  "nombreArchivo": "soat.pdf",
+  "fechaExpedicion": "2026-01-01T00:00:00Z",
+  "fechaVencimiento": "2027-01-01T00:00:00Z"
+}

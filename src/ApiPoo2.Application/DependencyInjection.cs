@@ -22,6 +22,8 @@ using ApiPoo2.Application.UseCases.Personas;
 using ApiPoo2.Application.UseCases.Personas.Create;
 using ApiPoo2.Application.UseCases.Personas.Get;
 using ApiPoo2.Application.UseCases.Personas.Update;
+using ApiPoo2.Application.UseCases.Mapas.BuscarDirecciones;
+using ApiPoo2.Application.UseCases.Mapas.CalcularRuta;
 using ApiPoo2.Application.UseCases.Usuarios;
 using ApiPoo2.Application.UseCases.Usuarios.AsignarRol;
 using ApiPoo2.Application.UseCases.Usuarios.Crear;
@@ -131,6 +133,8 @@ public static class DependencyInjection
         services.AddScoped<GetDocumentosPorVencerUseCase>();
         services.AddScoped<GetVehiculosDocumentosVencidosUseCase>();
         services.AddScoped<CountPersonasByTipoUseCase>();
+        services.AddScoped<BuscarDireccionesUseCase>();
+        services.AddScoped<CalcularRutaUseCase>();
 
         // Validators
         services.AddScoped<IValidator<LoginInputDto>, LoginValidator>();
@@ -154,6 +158,8 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CreateParadaInputDto>, CreateParadaValidator>();
         services.AddScoped<IValidator<UpdateParadaInputDto>, UpdateParadaValidator>();
         services.AddScoped<IValidator<RegistrarLicenciaConductorInputDto>, RegistrarLicenciaConductorValidator>();
+        services.AddScoped<IValidator<BuscarDireccionesInputDto>, BuscarDireccionesValidator>();
+        services.AddScoped<IValidator<CalcularRutaInputDto>, CalcularRutaValidator>();
 
         return services;
     }

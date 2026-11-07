@@ -1,0 +1,414 @@
+GUION AMPLIADO PARA PRESENTAR API_PPOO
+Duracion aproximada: 10 a 12 minutos
+Formato: texto plano para leer desde celular
+
+NOTA PARA QUIEN PRESENTA
+
+Los textos entre corchetes son acciones para hacer durante la demostracion; no es
+necesario leerlos en voz alta. Las rutas pueden aparecer agrupadas en Swagger
+por controlador. Para las operaciones protegidas se necesita un JWT y, cuando
+Swagger lo indique, tambien la API key propia de la aplicacion.
+
+
+1. PRESENTACION DEL PROYECTO
+
+PRESENTADOR:
+Buenos dias. Hoy voy a presentar API_PPOO, una API REST construida con .NET 10.
+El sistema permite administrar personas, usuarios, vehiculos, documentos y
+asociaciones entre conductores y vehiculos.
+
+Ademas de las operaciones de gestion, ofrece consultas para revisar documentos
+vencidos o proximos a vencer, autenticacion con tokens y una integracion externa
+con Geoapify para buscar direcciones y calcular rutas.
+
+Una API REST recibe solicitudes por HTTP y responde con datos, normalmente en
+formato JSON. En este proyecto, Swagger permite explorar esas solicitudes,
+consultar que datos pide cada una y probarlas sin tener que construir un cliente
+aparte.
+
+[ACCION: abrir http://localhost:5114/swagger. Si todavia no se ha iniciado la
+aplicacion, mostrar primero la consola donde se ejecuto dotnet run.]
+
+
+2. COMO ESTA ORGANIZADO
+
+PRESENTADOR:
+El codigo esta separado en capas siguiendo Clean Architecture.
+
+La capa Domain contiene las entidades y reglas fundamentales, por ejemplo, las
+reglas que deben cumplirse al crear o cambiar informacion de una persona o un
+vehiculo.
+
+La capa Application contiene los casos de uso. Un caso de uso representa una
+accion concreta, como crear una persona, iniciar sesion o calcular una ruta.
+Tambien coordina la validacion y la comunicacion con las interfaces necesarias.
+
+La capa Infrastructure implementa los detalles tecnicos: almacenamiento en
+PostgreSQL mediante Entity Framework Core, seguridad y comunicacion HTTP con
+Geoapify.
+
+Finalmente, WebApi expone los controladores y las rutas HTTP, valida las
+solicitudes y presenta Swagger.
+
+Esta separacion ayuda a que las reglas del negocio no dependan directamente de
+la base de datos o de una pantalla. Tambien permite probar varias partes del
+sistema por separado.
+
+
+3. BASE DE DATOS Y ARRANQUE INICIAL
+
+PRESENTADOR:
+La informacion se almacena en PostgreSQL. La configuracion local, como la
+conexion de base de datos y el secreto de JWT, se guarda en el archivo .env, que
+no se publica en el repositorio porque puede contener datos privados.
+
+Para iniciar una demostracion hacen falta la API y una base de datos disponible.
+La ruta /health permite consultar si la API esta activa y si logra conectarse
+con PostgreSQL.
+
+El sistema incluye una operacion especial para crear el primer administrador.
+Esta operacion se llama bootstrap y se realiza con POST /api/bootstrap/admin.
+Los datos iniciales del administrador vienen de la configuracion local. Esta
+operacion solo esta habilitada cuando la base todavia no tiene personas; despues
+de crear el primer registro, no se puede volver a usar como si fuera un registro
+normal.
+
+El bootstrap devuelve las credenciales iniciales necesarias para iniciar sesion.
+Es importante guardarlas de forma segura, porque la respuesta puede ser la unica
+vez que se presentan algunos valores generados.
+
+[ACCION: mostrar GET /health. Si la base esta vacia y la configuracion del
+bootstrap esta lista, ejecutar POST /api/bootstrap/admin una sola vez. No volver
+a ejecutar el bootstrap si ya hay datos.]
+
+
+4. AUTENTICACION: INICIAR Y RENOVAR SESION
+
+PRESENTADOR:
+Para iniciar sesion se utiliza POST /api/auth/login. Se envian el login y la
+contrasena. Si las credenciales son validas, la respuesta incluye tokens para
+autenticarse y continuar la sesion.
+
+El access token es un JWT. Se envia en las solicitudes protegidas para que la API
+pueda identificar al usuario. El refresh token sirve para solicitar una nueva
+sesion cuando el access token ya no se debe seguir usando.
+
+La renovacion se realiza con POST /api/auth/refresh. El sistema rota los refresh
+tokens: entrega uno nuevo y deja de aceptar el anterior. Esta medida ayuda a
+detectar el uso repetido de un token que ya fue renovado.
+
+[ACCION: en Swagger abrir POST /api/auth/login, introducir las credenciales de
+la cuenta de demostracion y ejecutar. No mostrar contrasenas ni tokens reales
+al publico.]
+
+
+5. AUTORIZACION Y SEGURIDAD DE LAS SOLICITUDES
+
+PRESENTADOR:
+Autenticacion y autorizacion son conceptos relacionados, pero distintos.
+Autenticacion responde quien esta haciendo la solicitud. Autorizacion responde
+si esa persona tiene permiso para realizar esa operacion.
+
+En esta API, algunas rutas solo requieren un JWT. Otras tambien requieren una
+API key de la propia aplicacion, que se envia en el encabezado X-Api-Key.
+Algunos endpoints de administracion requieren ademas el rol correspondiente.
+Swagger muestra que mecanismos de seguridad aplica cada operacion.
+
+Para probar una ruta protegida, se usa el boton Authorize de Swagger. En el
+esquema Bearer se pega el access token. En el esquema ApiKey se pega la API key
+de la aplicacion. No son la misma clave: tampoco es la clave de Geoapify.
+
+El sistema tambien permite cerrar una sesion con POST /api/auth/logout, revocar
+un refresh token con POST /api/auth/revoke-token y cambiar la contrasena propia
+con POST /api/auth/change-password. Al cambiar la contrasena, se invalidan las
+sesiones existentes para que no sigan activas con la clave anterior.
+
+La informacion del usuario que esta usando el token puede consultarse con
+GET /api/users/me.
+
+[ACCION: pulsar Authorize. Ingresar los valores de la cuenta de demostracion.
+Luego consultar GET /api/users/me. No proyectar los valores secretos.]
+
+
+6. PERSONAS
+
+PRESENTADOR:
+Las personas se gestionan desde las rutas /api/personas.
+
+POST /api/personas registra una persona con la informacion solicitada, como sus
+datos de identificacion y contacto. Cuando el registro corresponde a una
+persona administrativa, el flujo de negocio puede generar su usuario asociado
+con credenciales propias.
+
+GET /api/personas/{id} consulta una persona por su identificador. PUT
+/api/personas/{id} actualiza los datos permitidos, como nombres, apellidos,
+correo y tipo de persona.
+
+Estas operaciones estan protegidas: requieren autenticacion y API key segun la
+politica configurada. La API valida los datos antes de aplicar los cambios y
+responde con errores de negocio cuando una regla no se cumple.
+
+[ACCION: si hay una persona de prueba, mostrar GET por identificador y despues
+explicar el formulario de POST o PUT. Evitar crear registros innecesarios
+durante la presentacion.]
+
+
+7. ADMINISTRACION DE USUARIOS
+
+PRESENTADOR:
+Las rutas de /api/usuarios permiten a los usuarios autorizados administrar
+cuentas.
+
+GET /api/usuarios lista usuarios de forma paginada. La paginacion permite
+consultar los resultados por partes en lugar de devolver todos los registros
+en una sola respuesta.
+
+GET /api/usuarios/{id} consulta el detalle de un usuario por el identificador de
+su persona. POST /api/usuarios crea un usuario asociado a una persona que ya
+existe. PUT /api/usuarios/{id} actualiza el perfil y DELETE /api/usuarios/{id}
+desactiva la cuenta en lugar de exponer la eliminacion fisica de los datos.
+
+PUT /api/usuarios/{id}/rol permite asignar un rol. Las operaciones de listado,
+consulta y administracion de otros usuarios estan restringidas a
+administradores.
+
+Tambien existen operaciones para cambiar una contrasena de usuario y regenerar
+su API key. Regenerar la API key significa emitir otra credencial de aplicacion;
+los clientes que usaban la anterior tendran que actualizarla.
+
+[ACCION: mostrar GET /api/usuarios si se cuenta con un usuario administrador.
+Explicar paginacion y los permisos. No regenerar credenciales reales frente al
+publico porque puede invalidar las que se estan utilizando.]
+
+
+8. VEHICULOS
+
+PRESENTADOR:
+La API permite administrar vehiculos mediante /api/vehiculos.
+
+POST /api/vehiculos registra un vehiculo con sus caracteristicas, por ejemplo,
+placa, tipo, servicio, combustible, capacidad, color, modelo, marca y linea.
+La informacion se valida antes de persistirse.
+
+GET /api/vehiculos/{id} consulta un vehiculo por identificador. PUT
+/api/vehiculos/{id} modifica sus datos, y DELETE /api/vehiculos/{id} elimina el
+registro segun las reglas del caso de uso.
+
+Tambien se puede filtrar el conjunto por tipo de vehiculo, por codigo de tipo
+de documento o por estado del documento. Estas consultas permiten revisar
+categorias concretas sin tener que abrir cada vehiculo individualmente.
+
+Hay una consulta por placa en GET /api/vehiculos/placa/{placa}. Esa ruta esta
+marcada como publica en el codigo; otras rutas de vehiculos exigen autenticacion
+y API key.
+
+[ACCION: mostrar GET por placa con una placa que exista en la base. Luego mostrar
+los filtros disponibles por tipo o estado, si hay datos de ejemplo.]
+
+
+9. TIPOS DE DOCUMENTO Y DOCUMENTOS DE VEHICULOS
+
+PRESENTADOR:
+El catalogo de tipos de documento define que documentos se pueden asociar a los
+vehiculos. Se administra desde /api/tipos-documento.
+
+POST crea un tipo de documento. GET /api/tipos-documento lista el catalogo y
+GET /api/tipos-documento/{id} consulta un tipo concreto. PUT actualiza sus
+atributos, como nombre, tipos de vehiculo a los que aplica, obligatoriedad y
+descripcion. DELETE elimina el tipo segun las reglas del sistema.
+
+Para los documentos de un vehiculo se puede enviar contenido en Base64 mediante
+POST /api/vehiculos/{vehiculoId}/documentos. Asi el contenido viaja dentro de
+una solicitud HTTP sin requerir que el servidor lea una ruta local del equipo
+del usuario.
+
+El estado de un documento asociado se puede modificar con
+PUT /api/vehiculos/{vehiculoId}/documentos/{tipoDocumentoId}/estado.
+
+[ACCION: explicar el catalogo y la carga. Si se hace una carga real, usar un
+archivo y vehiculo de prueba; no usar documentos personales o sensibles.]
+
+
+10. CONDUCTORES Y ASOCIACION CON VEHICULOS
+
+PRESENTADOR:
+La API tambien representa la relacion entre conductores y vehiculos.
+
+POST /api/conductores/vehiculos permite asociar los vehiculos que puede operar
+un conductor. La operacion recibe la informacion de las personas y vehiculos
+involucrados y devuelve el resultado de la asociacion.
+
+PUT /api/conductores/estado cambia el estado de la relacion entre un conductor
+y un vehiculo. Los estados de negocio incluyen PO, EA y RO. El cambio se valida
+antes de guardarse para mantener coherentes las relaciones.
+
+La consulta de conductores operables muestra las asociaciones que se encuentran
+en el estado correspondiente y permite limitar la cantidad de resultados.
+
+[ACCION: mostrar GET /api/consultas/conductores-operables. Despues explicar que
+la asociacion y el cambio de estado se realizan con POST y PUT protegidos.]
+
+
+11. CONSULTAS DE NEGOCIO
+
+PRESENTADOR:
+El controlador /api/consultas ofrece consultas de solo lectura.
+
+GET /api/consultas/documentos-vencidos devuelve documentos cuya fecha de
+vencimiento ya paso.
+
+GET /api/consultas/documentos-por-vencer?dias=30 permite indicar cuantos dias
+hacia adelante se quieren revisar. El valor de dias debe ser mayor que cero.
+Esto permite anticiparse a vencimientos y no esperar hasta que el documento ya
+este vencido.
+
+GET /api/consultas/conductores-operables?cantidad=50 devuelve hasta la cantidad
+solicitada de conductores operables.
+
+GET /api/consultas/personas-por-tipo devuelve el total de personas agrupadas
+por tipo.
+
+Estas rutas de consultas son publicas en la configuracion actual. Por eso, en
+Swagger aparecen sin la misma autorizacion que se pide para las operaciones
+de escritura.
+
+[ACCION: ejecutar la consulta de documentos vencidos y la de personas por tipo.
+Para probar documentos por vencer, ingresar un numero positivo de dias.]
+
+
+12. INTEGRACION CON GEOAPIFY
+
+PRESENTADOR:
+El proyecto incluye dos endpoints de backend que consumen Geoapify.
+
+El primero es POST /api/mapas/direcciones. Recibe una consulta de texto, por
+ejemplo el nombre de un lugar o una direccion. La API reenvia la busqueda al
+servicio Geoapify y devuelve resultados con el texto formateado, ciudad, pais y
+coordenadas de latitud y longitud.
+
+El segundo es POST /api/mapas/rutas. Recibe las coordenadas de origen y destino
+y un modo de transporte, como drive. La respuesta incluye la distancia en
+metros, la duracion estimada en segundos y una lista de coordenadas que describe
+la geometria de la ruta.
+
+La clave de Geoapify se lee desde Geoapify__ApiKey en la configuracion local
+.env. La clave no se devuelve en las respuestas ni debe ponerse en el codigo
+fuente o en el frontend.
+
+Una aclaracion importante: estos endpoints permiten buscar direcciones y
+calcular una ruta, pero la API no tiene una pagina que pinte el mapa. Swagger
+muestra los resultados como JSON. Para ver un mapa visual con marcadores y
+la ruta dibujada hace falta una interfaz frontend que consuma las coordenadas.
+
+[ACCION: si la API y la clave estan listas, ejecutar POST /api/mapas/direcciones
+con una direccion de prueba. Despues ejecutar POST /api/mapas/rutas con dos
+coordenadas conocidas. Mostrar los campos distancia, duracion y coordenadas.]
+
+
+13. VALIDACIONES Y RESPUESTAS DE ERROR
+
+PRESENTADOR:
+La API valida las solicitudes antes de procesarlas. Por ejemplo, comprueba los
+campos obligatorios, limites numericos y rangos de latitud y longitud. Para
+calcular una ruta, una latitud debe estar entre -90 y 90, y una longitud entre
+-180 y 180.
+
+Cuando ocurre un error conocido, la API responde con un formato uniforme que
+incluye el estado HTTP, un codigo estable, un mensaje y un identificador de
+seguimiento. Esto facilita distinguir si el problema fue una validacion, un
+conflicto de datos, una falta de autorizacion o un error inesperado.
+
+Por ejemplo, un documento con datos invalidos puede producir una respuesta de
+validacion; intentar crear una identificacion duplicada puede producir un
+conflicto. En lugar de ocultar el problema, la respuesta indica que tipo de
+error ocurrio.
+
+[ACCION OPCIONAL: mostrar una solicitud de prueba con un campo requerido vacio
+o una latitud fuera del rango. Evitar modificar datos reales.]
+
+
+14. PRUEBAS Y CALIDAD
+
+PRESENTADOR:
+El repositorio contiene pruebas para las capas de dominio, aplicacion,
+infraestructura y WebApi, ademas de pruebas de arquitectura e integracion.
+
+Las pruebas offline no necesitan conectarse a PostgreSQL. Las pruebas de
+integracion verifican la API completa y requieren una base PostgreSQL local de
+pruebas.
+
+Las pruebas ayudan a comprobar que las reglas del dominio se mantienen, que los
+casos de uso coordinan correctamente sus dependencias y que servicios como el
+cliente de Geoapify procesan las respuestas correctamente.
+
+
+15. CIERRE
+
+PRESENTADOR:
+En resumen, API_PPOO ofrece operaciones para administrar personas, cuentas,
+vehiculos, documentos y asociaciones de conductores. Incluye autenticacion con
+JWT y refresh tokens, controles de autorizacion, consultas de negocio,
+documentacion interactiva en Swagger e integracion de backend con Geoapify.
+
+La arquitectura por capas mantiene separadas las responsabilidades y las
+pruebas ayudan a verificar su funcionamiento.
+
+La integracion de Geoapify devuelve coordenadas y geometria de ruta. Para
+convertir esos datos en un mapa visible se debe agregar o conectar un frontend.
+
+Muchas gracias. Estoy listo para responder preguntas.
+
+
+PREGUNTAS POSIBLES Y RESPUESTAS
+
+PREGUNTA:
+¿Swagger es la aplicacion completa?
+
+RESPUESTA:
+No. Swagger es una interfaz para documentar y probar los endpoints. La API
+procesa las solicitudes y PostgreSQL almacena los datos.
+
+PREGUNTA:
+¿Cual es la diferencia entre JWT y API key?
+
+RESPUESTA:
+El JWT identifica la sesion del usuario. La API key de la aplicacion es una
+segunda credencial que algunos endpoints exigen. Son valores diferentes.
+
+PREGUNTA:
+¿La API key de Geoapify es la misma que X-Api-Key?
+
+RESPUESTA:
+No. X-Api-Key autoriza ciertas solicitudes a nuestra API. La clave de Geoapify
+la usa el backend para comunicarse con el proveedor de mapas. No se deben
+confundir ni intercambiar.
+
+PREGUNTA:
+¿Ya se muestra el mapa?
+
+RESPUESTA:
+El backend ya puede buscar direcciones y calcular rutas, pero devuelve los
+resultados como JSON. Todavia hace falta una interfaz frontend para dibujar el
+mapa, los marcadores y la ruta.
+
+PREGUNTA:
+¿Que pasa si la base de datos no esta disponible?
+
+RESPUESTA:
+La API puede arrancar con errores o no completar las operaciones que necesitan
+datos. El endpoint /health ayuda a verificar el estado de la conexion.
+
+PREGUNTA:
+¿Por que hay endpoints publicos y otros protegidos?
+
+RESPUESTA:
+Las operaciones de consulta que se decidieron publicas permiten leer ciertos
+datos. Las operaciones que cambian informacion, administran cuentas o usan
+recursos protegidos exigen las credenciales correspondientes.
+
+PREGUNTA:
+¿Donde se configura la clave del proveedor de mapas?
+
+RESPUESTA:
+En la configuracion local del backend, mediante Geoapify__ApiKey en el archivo
+.env. No debe subirse al repositorio ni incluirse en una captura publica.

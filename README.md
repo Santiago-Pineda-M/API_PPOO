@@ -191,10 +191,100 @@ curl http://localhost:5114/api/vehiculos/placa/ABC123 \
 | `GET` | `/api/consultas/documentos-por-vencer?dias={n}` | público | Documentos que vencen pronto |
 | `GET` | `/api/consultas/conductores-operables?cantidad={n}` | público | Conductores en estado `PO` |
 | `GET` | `/api/consultas/personas-por-tipo` | público | Total de personas por tipo |
+| `POST` | `/api/mapas/direcciones` | JWT + APIKey | Busca direcciones y devuelve coordenadas (Geoapify) |
+| `POST` | `/api/mapas/rutas` | JWT + APIKey | Calcula ruta, distancia, duración y geometría (Geoapify) |
+
+Las credenciales de Geoapify se configuran localmente con `Geoapify__ApiKey` en `.env`; no se deben subir al repositorio. La API devuelve la geometría de la ruta para que un frontend pueda dibujarla. La visualización del mapa base requiere una interfaz frontend, que no forma parte de este repositorio.
 
 Los errores responden `application/problem+json` con `{status, code, message, errors, traceId}`; el `code` es estable (ej. `password.policy`, `refresh.reuse`, `persona.identificacion.conflict`).
 
 ---
+
+### Ejemplos de altas en Swagger
+
+En Swagger pulsa **Try it out** y envía JSON válido. Los enums se reciben como
+números: `tipoPersona` es `1` para `Administrativo` y `2` para `Conductor`;
+`tipoIdentificacion` es `1` para `CedulaCiudadania`. No escribas etiquetas como
+`conductor` sin comillas ni texto explicativo dentro del JSON.
+
+Para registrar una persona, autoriza primero con JWT y `X-Api-Key` y usa
+`POST /api/personas`:
+
+```json
+{
+  "tipoIdentificacion": 1,
+  "numeroIdentificacion": "9000001234",
+  "nombres": "Ana",
+  "apellidos": "Conductora Demo",
+  "correoElectronico": "ana.conductora.demo@example.com",
+  "tipoPersona": 2
+}
+```
+
+La identificación debe contener solo dígitos, el correo debe ser válido y el
+`tipoPersona` no lleva texto adicional. Para crear una persona administrativa,
+cambia `tipoPersona` a `1`; la respuesta incluye las credenciales generadas
+para su usuario, que se deben guardar de forma segura.
+
+Para crear un vehículo primero registra un tipo de documento con
+`POST /api/tipos-documento`, por ejemplo:
+
+```json
+{
+  "codigo": "DEMO-SOAT",
+  "nombre": "SOAT de demostración",
+  "tiposVehiculoAplicables": "A",
+  "codigoObligatoriedad": "RA",
+  "descripcion": "Documento de prueba para automóvil"
+}
+```
+
+Copia el `id` devuelto y úsalo en `POST /api/vehiculos`. El alta requiere los
+datos del vehículo y un documento en Base64:
+
+```json
+{
+  "placa": "DEM123",
+  "tipoVehiculo": 1,
+  "tipoServicio": 2,
+  "tipoCombustible": 1,
+  "capacidadPasajeros": 5,
+  "color": "#336699",
+  "modelo": 2024,
+  "marca": "Demo",
+  "linea": "Presentacion",
+  "tipoDocumentoId": "PEGA-AQUI-EL-ID-DEL-TIPO-DE-DOCUMENTO",
+  "documentoBase64": "JVBERi0xLjQKJUVPRg==",
+  "nombreArchivo": "soat.pdf",
+  "fechaExpedicion": "2026-01-01T00:00:00Z",
+  "fechaVencimiento": "2027-01-01T00:00:00Z"
+}
+```
+
+Los valores de enums usados arriba son `tipoVehiculo: 1` (`Automovil`),
+`tipoServicio: 2` (`Privado`) y `tipoCombustible: 1` (`Gasolina`). La placa de
+automóvil debe tener tres letras y tres números; la de motocicleta, tres letras,
+dos números y una letra. El color debe usar `#RRGGBB`, las fechas deben ser
+válidas y el vencimiento debe ser posterior a la expedición. Cambia la placa,
+el código de documento, la identificación y el correo si ya existen en tu base.
+Más ejemplos listos para el cliente REST de VS Code están en
+[`src/ApiPoo2.WebApi/Demo.http`](src/ApiPoo2.WebApi/Demo.http).
+
+#### Cargar registros locales para una presentación
+
+Con PostgreSQL local y la API ejecutándose en `http://localhost:5114`, ejecuta
+desde PowerShell:
+
+```powershell
+.\scripts\Seed-DemoData.ps1
+```
+
+El script crea un tipo de documento, una persona conductora, un vehículo y su
+asociación, usando únicamente endpoints de la API. Si la base está vacía,
+inicializa el administrador con los valores `Bootstrap__*` de `.env`; si ya
+está inicializada, solicita el login y la contraseña de un administrador local.
+No escribe las credenciales en archivos ni permite apuntar a un host remoto.
+Cada ejecución agrega datos de demostración nuevos.
 
 ## 7. Pruebas
 

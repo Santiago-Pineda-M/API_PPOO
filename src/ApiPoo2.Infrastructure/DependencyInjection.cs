@@ -15,6 +15,7 @@ using ApiPoo2.Infrastructure.Persistence.Procedures;
 using ApiPoo2.Infrastructure.Persistence.Repositories;
 using ApiPoo2.Infrastructure.Security;
 using ApiPoo2.Infrastructure.Common;
+using ApiPoo2.Infrastructure.Geoapify;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -88,6 +89,9 @@ public static class DependencyInjection
         services.AddHostedService<ExpirarLicenciasBackgroundService>();
         services.AddHostedService<DocumentosVencidosBackgroundService>();
         services.AddHostedService<GeocodificacionBackgroundService>();
+        services.AddHttpClient<IGeoapifyService, GeoapifyService>(client =>
+                client.BaseAddress = new Uri("https://api.geoapify.com/"))
+            .RemoveAllLoggers();
 
         return services;
     }
